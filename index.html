@@ -99,9 +99,12 @@
                         </select>
                     </div>
 
-                    <div class="pt-4 border-t border-slate-800">
+                    <div class="pt-4 border-t border-slate-800 space-y-2">
                         <button id="start-btn" class="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-lg font-black mono text-sm transition-all shadow-lg disabled:opacity-30 disabled:cursor-not-allowed" disabled>
                             GERAR DOCUMENTÁRIO & VÍDEO
+                        </button>
+                        <button id="stop-btn" class="w-full bg-slate-700 hover:bg-slate-600 py-3 rounded-lg font-black mono text-xs transition-all shadow-lg disabled:opacity-30 disabled:cursor-not-allowed" disabled>
+                            STOP
                         </button>
                     </div>
                 </div>
@@ -121,6 +124,7 @@
         const ctx = canvas.getContext('2d');
         const log = document.getElementById('log');
         const startBtn = document.getElementById('start-btn');
+        const stopBtn = document.getElementById('stop-btn');
         const fileInput = document.getElementById('file-input');
         const dropZone = document.getElementById('drop-zone');
         const voiceSelect = document.getElementById('voice-select');
@@ -452,6 +456,7 @@
             progressOverlay.classList.remove('translate-y-20', 'opacity-0');
             document.getElementById('rec-indicator').classList.remove('hidden');
             startBtn.disabled = true;
+            stopBtn.disabled = false;
 
             addLog('GPU Pipeline: Iniciando stream de vídeo 60fps...');
 
@@ -498,6 +503,7 @@
                 addLog(`FALHA NO CORE: ${err.message}`, 'error');
                 isProcessing = false;
                 startBtn.disabled = false;
+                stopBtn.disabled = true;
             }
         }
 
@@ -535,7 +541,12 @@
             return speakWithBrowser(text);
         }
 
-        function stopGeneration() {
+        function stopGeneration(trigger = 'auto') {
+            if (!isProcessing && trigger === 'manual') {
+                addLog('Nenhuma geração ativa para interromper.');
+                return;
+            }
+
             isProcessing = false;
             synth.cancel();
             if (activeAudio) {
@@ -546,7 +557,8 @@
             progressOverlay.classList.add('translate-y-20', 'opacity-0');
             document.getElementById('rec-indicator').classList.add('hidden');
             startBtn.disabled = false;
-            addLog('Processamento local concluído. Salvando documento em vídeo.');
+            stopBtn.disabled = true;
+            addLog(trigger === 'manual' ? 'Geração interrompida manualmente. Finalizando exportação.' : 'Processamento local concluído. Salvando documento em vídeo.');
         }
 
         function exportVideo() {
@@ -560,6 +572,7 @@
         }
 
         startBtn.onclick = generateDocumentary;
+        stopBtn.onclick = () => stopGeneration('manual');
     </script>
 </body>
 </html>
