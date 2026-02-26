@@ -330,17 +330,23 @@
         }
 
         async function loadImageFromWikimedia(search) {
-            const query = encodeURIComponent((search || 'documentary realistic photo') + ' filetype:bitmap');
-            const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${query}&gsrlimit=25&gsrnamespace=6&prop=imageinfo&iiprop=url&format=json&origin=*`;
-            const response = await fetch(url);
-            const data = await response.json();
-            const pages = Object.values(data?.query?.pages || {});
-            const candidates = pages
-                .map(p => p.imageinfo?.[0]?.url)
-                .filter(Boolean)
-                .filter(u => /\.(jpg|jpeg|png|webp)$/i.test(u));
-            if (candidates.length === 0) throw new Error('sem resultados para o tema');
-            return candidates[Math.floor(Math.random() * Math.min(candidates.length, 10))];
+            async function queryWikimedia(term) {
+                const query = encodeURIComponent(term);
+                const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${query}&gsrlimit=25&gsrnamespace=6&prop=imageinfo&iiprop=url&format=json&origin=*`;
+                const response = await fetch(url);
+                const data = await response.json();
+                const pages = Object.values(data?.query?.pages || {});
+                return pages
+                    .map(p => p.imageinfo?.[0]?.url)
+                    .filter(Boolean)
+                    .filter(u => /\.(jpg|jpeg|png|webp)$/i.test(u));
+            }
+
+            const baseQuery = search || 'documentary realistic photo';
+            const strictCandidates = await queryWikimedia(`${baseQuery} filetype:bitmap`);
+            const broadCandidates = strictCandidates.length ? strictCandidates : await queryWikimedia(baseQuery);
+            if (broadCandidates.length === 0) throw new Error('sem resultados para o tema');
+            return broadCandidates[Math.floor(Math.random() * Math.min(broadCandidates.length, 10))];
         }
 
         async function loadImageFromPexels(search) {
@@ -370,11 +376,12 @@
             return `https://picsum.photos/seed/${seed}/1280/720?grayscale=${document.getElementById('style-select').value === 'noir' ? 1 : 0}`;
         }
 
-        function providerUnavailableOnce(provider, reason) {
+        function providerUnavailableOnce(provider, reason, level = 'warning') {
             const key = `${provider}:${reason}`;
             if (providerWarningsShown.has(key)) return;
             providerWarningsShown.add(key);
-            addLog(`Fonte ${provider} indisponível: ${reason}`, 'error');
+            const msg = `Fonte ${provider} indisponível: ${reason}`;
+            addLog(msg, level === 'error' ? 'error' : 'default');
         }
 
         async function resolveSceneImage(search) {
@@ -390,16 +397,16 @@
             if (source === 'picsum') chain.push({ name: 'Picsum', fn: (s) => Promise.resolve(loadImageFromPicsum(s)) });
             if (!chain.length || source === 'auto') chain.push({ name: 'Picsum', fn: (s) => Promise.resolve(loadImageFromPicsum(s)) });
 
-            if ((source === 'pexels' || source === 'auto') && !hasPexels) providerUnavailableOnce('Pexels', 'API key não configurada (opcional)');
-            if ((source === 'pixabay' || source === 'auto') && !hasPixabay) providerUnavailableOnce('Pixabay', 'API key não configurada (opcional)');
+            if (source === 'pexels' && !hasPexels) providerUnavailableOnce('Pexels', 'API key não configurada (opcional)');
+            if (source === 'pixabay' && !hasPixabay) providerUnavailableOnce('Pixabay', 'API key não configurada (opcional)');
 
             for (const loader of chain) {
                 try {
                     const url = await loader.fn(semanticSearch);
                     if (url) return { url, provider: loader.name, query: semanticSearch };
-                    providerUnavailableOnce(loader.name, 'sem resultados para o tema');
+                    if (source !== 'auto') providerUnavailableOnce(loader.name, 'sem resultados para o tema');
                 } catch (error) {
-                    providerUnavailableOnce(loader.name, error.message);
+                    if (source !== 'auto') providerUnavailableOnce(loader.name, error.message, 'error');
                 }
             }
 
