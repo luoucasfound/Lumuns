@@ -257,7 +257,7 @@
             const mapped = [];
             for (const token of tokens) {
                 mapped.push(ptToEn[token] || token);
-                if (mapped.length >= 5) break;
+                if (mapped.length >= 8) break;
             }
 
             const finalTokens = mapped.length ? mapped : ['documentary', 'historical', 'realistic', 'cinematic'];
@@ -329,6 +329,39 @@
             }
         }
 
+
+        function buildSceneQueries(step) {
+            const rawText = (step?.text || '').trim();
+            const rawSearch = (step?.search || '').trim();
+            const normalizedFromSearch = normalizeSearchTerm(rawSearch);
+            const normalizedFromText = normalizeSearchTerm(rawText);
+            const normalizedCombined = normalizeSearchTerm(`${rawSearch} ${rawText}`);
+
+            const variants = [
+                normalizedFromSearch,
+                normalizedCombined,
+                normalizedFromText,
+                `${normalizedFromSearch} documentary photojournalism`,
+                `${normalizedFromText} realistic photography`
+            ].map(v => (v || '').trim()).filter(Boolean);
+
+            const lowered = `${rawSearch} ${rawText}`.toLowerCase();
+            if (/\b(19\d{2}|20\d{2})\b/.test(lowered)) {
+                variants.push(`${normalizedCombined} historical archive photo`);
+            }
+            if (/guerra|conflito|battle|war|militar|army/.test(lowered)) {
+                variants.push(`${normalizedCombined} war documentary photography`);
+            }
+            if (/ci[eê]ncia|laborat[oó]rio|tecnologia|space|satellite/.test(lowered)) {
+                variants.push(`${normalizedCombined} science documentary photo`);
+            }
+            if (/floresta|natureza|clima|oceano|amaz[oô]nia|rainforest/.test(lowered)) {
+                variants.push(`${normalizedCombined} environmental documentary photo`);
+            }
+
+            return [...new Set(variants)].slice(0, 7);
+        }
+
         async function loadImageFromWikimedia(search) {
             async function queryWikimedia(term) {
                 const query = encodeURIComponent(term);
@@ -384,33 +417,36 @@
             addLog(msg, level === 'error' ? 'error' : 'default');
         }
 
-        async function resolveSceneImage(search) {
+        async function resolveSceneImage(step) {
             const source = imageSourceSelect.value;
             const hasPexels = Boolean(getPexelsKey());
             const hasPixabay = Boolean(getPixabayKey());
-            const semanticSearch = normalizeSearchTerm(search);
+            const queries = buildSceneQueries(step);
 
             const chain = [];
             if (source === 'auto' || source === 'wikimedia') chain.push({ name: 'Wikimedia', fn: loadImageFromWikimedia });
             if ((source === 'auto' || source === 'pexels') && hasPexels) chain.push({ name: 'Pexels', fn: loadImageFromPexels });
             if ((source === 'auto' || source === 'pixabay') && hasPixabay) chain.push({ name: 'Pixabay', fn: loadImageFromPixabay });
-            if (source === 'picsum') chain.push({ name: 'Picsum', fn: (s) => Promise.resolve(loadImageFromPicsum(s)) });
-            if (!chain.length || source === 'auto') chain.push({ name: 'Picsum', fn: (s) => Promise.resolve(loadImageFromPicsum(s)) });
+            if (source === 'picsum') chain.push({ name: 'Picsum', fn: (q) => Promise.resolve(loadImageFromPicsum(q)) });
+            if (!chain.length || source === 'auto') chain.push({ name: 'Picsum', fn: (q) => Promise.resolve(loadImageFromPicsum(q)) });
 
             if (source === 'pexels' && !hasPexels) providerUnavailableOnce('Pexels', 'API key não configurada (opcional)');
             if (source === 'pixabay' && !hasPixabay) providerUnavailableOnce('Pixabay', 'API key não configurada (opcional)');
 
-            for (const loader of chain) {
-                try {
-                    const url = await loader.fn(semanticSearch);
-                    if (url) return { url, provider: loader.name, query: semanticSearch };
-                    if (source !== 'auto') providerUnavailableOnce(loader.name, 'sem resultados para o tema');
-                } catch (error) {
-                    if (source !== 'auto') providerUnavailableOnce(loader.name, error.message, 'error');
+            for (const query of queries) {
+                for (const loader of chain) {
+                    try {
+                        const url = await loader.fn(query);
+                        if (url) return { url, provider: loader.name, query };
+                        if (source !== 'auto') providerUnavailableOnce(loader.name, `sem resultados para: ${query}`);
+                    } catch (error) {
+                        if (source !== 'auto') providerUnavailableOnce(loader.name, `${error.message} (${query})`, 'error');
+                    }
                 }
             }
 
-            return { url: loadImageFromPicsum(semanticSearch), provider: 'Picsum', query: semanticSearch };
+            const fallbackQuery = queries[0] || normalizeSearchTerm(step?.text || step?.search || 'history');
+            return { url: loadImageFromPicsum(fallbackQuery), provider: 'Picsum', query: fallbackQuery };
         }
 
 
@@ -584,7 +620,7 @@
 
                     addLog(`Cena ${i + 1}: limite máximo de 5 min (${Math.round(sceneDurationMs / 1000)}s planejados).`);
 
-                    const imageAsset = await resolveSceneImage(step.search || step.text);
+                    const imageAsset = await resolveSceneImage(step);
                     addLog(`Imagem carregada via: ${imageAsset.provider} | query: ${imageAsset.query}`);
                     currentImg.src = imageAsset.url;
 
@@ -666,7 +702,7 @@
                     sceneDurationMs = estimateSceneDurationMs(step.text);
                     zoom = 1.0;
 
-                    const imageAsset = await resolveSceneImage(step.search || step.text);
+                    const imageAsset = await resolveSceneImage(step);
                     currentImg.src = imageAsset.url;
 
                     await new Promise((resolve) => {
