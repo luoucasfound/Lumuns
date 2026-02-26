@@ -244,7 +244,8 @@
                 indígena: 'indigenous people', indigena: 'indigenous people', seca: 'drought', enchente: 'flood', terremoto: 'earthquake',
                 energia: 'energy infrastructure', petróleo: 'oil industry', petroleo: 'oil industry', mineração: 'mining', mineracao: 'mining',
                 trabalho: 'workers', fábrica: 'factory', fabrica: 'factory', protesto: 'street protest', democracia: 'democracy',
-                agricultura: 'agriculture', satélite: 'satellite', satelite: 'satellite'
+                agricultura: 'agriculture', satélite: 'satellite', satelite: 'satellite', biblioteca: 'library', bibliotecas: 'libraries',
+                biblioclastia: 'library destruction', destruicao: 'destruction', destruição: 'destruction', arquivos: 'archives', geopolitica: 'geopolitics'
             };
             const stopwords = new Set(['a','o','as','os','de','da','do','das','dos','e','em','na','no','nas','nos','com','para','por','que','se','um','uma','ao','aos','às','é','foi','ser','como']);
             const tokens = (text || '')
@@ -362,6 +363,23 @@
             return [...new Set(variants)].slice(0, 7);
         }
 
+        function simplifyWikimediaQuery(query) {
+            const tokens = (query || '')
+                .toLowerCase()
+                .split(/\s+/)
+                .filter(Boolean);
+            const priority = ['library', 'libraries', 'archive', 'archives', 'destruction', 'war', 'history', 'geopolitics', 'documentary', 'photo'];
+            const picked = [];
+            for (const p of priority) {
+                if (tokens.includes(p) && !picked.includes(p)) picked.push(p);
+            }
+            for (const t of tokens) {
+                if (!picked.includes(t) && /^[a-z]+$/.test(t)) picked.push(t);
+                if (picked.length >= 6) break;
+            }
+            return picked.slice(0, 6).join(' ') || 'historical archive library documentary photo';
+        }
+
         async function loadImageFromWikimedia(search) {
             async function queryWikimedia(term) {
                 const query = encodeURIComponent(term);
@@ -375,11 +393,21 @@
                     .filter(u => /\.(jpg|jpeg|png|webp)$/i.test(u));
             }
 
-            const baseQuery = search || 'documentary realistic photo';
-            const strictCandidates = await queryWikimedia(`${baseQuery} filetype:bitmap`);
-            const broadCandidates = strictCandidates.length ? strictCandidates : await queryWikimedia(baseQuery);
-            if (broadCandidates.length === 0) throw new Error('sem resultados para o tema');
-            return broadCandidates[Math.floor(Math.random() * Math.min(broadCandidates.length, 10))];
+            const baseQuery = (search || 'documentary realistic photo').trim();
+            const passes = [
+                `${baseQuery} filetype:bitmap`,
+                baseQuery,
+                simplifyWikimediaQuery(baseQuery),
+                'historical archive library documentary photo'
+            ];
+
+            for (const q of passes) {
+                const candidates = await queryWikimedia(q);
+                if (candidates.length) {
+                    return candidates[Math.floor(Math.random() * Math.min(candidates.length, 10))];
+                }
+            }
+            throw new Error('sem resultados para o tema');
         }
 
         async function loadImageFromPexels(search) {
@@ -410,10 +438,11 @@
         }
 
         function providerUnavailableOnce(provider, reason, level = 'warning') {
-            const key = `${provider}:${reason}`;
+            const normalizedReason = reason.startsWith('sem resultados para:') ? 'sem resultados para o tema' : reason;
+            const key = `${provider}:${normalizedReason}`;
             if (providerWarningsShown.has(key)) return;
             providerWarningsShown.add(key);
-            const msg = `Fonte ${provider} indisponível: ${reason}`;
+            const msg = `Fonte ${provider} indisponível: ${normalizedReason}`;
             addLog(msg, level === 'error' ? 'error' : 'default');
         }
 
@@ -438,7 +467,7 @@
                     try {
                         const url = await loader.fn(query);
                         if (url) return { url, provider: loader.name, query };
-                        if (source !== 'auto') providerUnavailableOnce(loader.name, `sem resultados para: ${query}`);
+                        if (source !== 'auto') providerUnavailableOnce(loader.name, 'sem resultados para o tema');
                     } catch (error) {
                         if (source !== 'auto') providerUnavailableOnce(loader.name, `${error.message} (${query})`, 'error');
                     }
@@ -659,15 +688,20 @@
                 const voice = voiceSelect.value || 'Ricardo';
                 const endpoint = `https://api.streamelements.com/kappa/v2/speech?voice=${encodeURIComponent(voice)}&text=${encodeURIComponent(text)}`;
                 activeAudio = new Audio(endpoint);
-                activeAudio.onended = () => setTimeout(resolve, 300);
-                activeAudio.onerror = () => {
-                    addLog('Falha no StreamElements TTS. Voltando ao Web Speech.', 'error');
+
+                let didFallback = false;
+                const fallbackToBrowser = () => {
+                    if (didFallback) return;
+                    didFallback = true;
+                    addLog('StreamElements indisponível nesta cena. Voltando ao Web Speech.');
                     speakWithBrowser(text).then(resolve);
                 };
-                activeAudio.play().catch(() => {
-                    addLog('Autoplay bloqueado pelo navegador. Voltando ao Web Speech.', 'error');
-                    speakWithBrowser(text).then(resolve);
-                });
+
+                activeAudio.onended = () => {
+                    if (!didFallback) setTimeout(resolve, 300);
+                };
+                activeAudio.onerror = fallbackToBrowser;
+                activeAudio.play().catch(fallbackToBrowser);
             });
         }
 
