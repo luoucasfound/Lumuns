@@ -162,7 +162,11 @@
         let sceneDurationMs = 8000;
         const MAX_SCENE_DURATION_MS = 5 * 60 * 1000;
         const MAX_SCENES = 25;
+        const IMAGE_QUERY_VARIANTS = 3;
+        const TARGET_FPS = 30;
+        const TARGET_BITRATE = 5000000;
         const providerWarningsShown = new Set();
+        const imageCache = new Map();
 
         canvas.width = 1280;
         canvas.height = 720;
@@ -360,7 +364,7 @@
                 variants.push(`${normalizedCombined} environmental documentary photo`);
             }
 
-            return [...new Set(variants)].slice(0, 7);
+            return [...new Set(variants)].slice(0, IMAGE_QUERY_VARIANTS);
         }
 
         function simplifyWikimediaQuery(query) {
@@ -383,7 +387,7 @@
         async function loadImageFromWikimedia(search) {
             async function queryWikimedia(term) {
                 const query = encodeURIComponent(term);
-                const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${query}&gsrlimit=25&gsrnamespace=6&prop=imageinfo&iiprop=url&format=json&origin=*`;
+                const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${query}&gsrlimit=12&gsrnamespace=6&prop=imageinfo&iiprop=url&format=json&origin=*`;
                 const response = await fetch(url);
                 const data = await response.json();
                 const pages = Object.values(data?.query?.pages || {});
@@ -396,10 +400,9 @@
             const baseQuery = (search || 'documentary realistic photo').trim();
             const passes = [
                 `${baseQuery} filetype:bitmap`,
-                baseQuery,
                 simplifyWikimediaQuery(baseQuery),
                 'historical archive library documentary photo'
-            ];
+            ].slice(0, 2);
 
             for (const q of passes) {
                 const candidates = await queryWikimedia(q);
@@ -465,8 +468,15 @@
             for (const query of queries) {
                 for (const loader of chain) {
                     try {
+                        const cacheKey = `${loader.name}:${query}`;
+                        if (imageCache.has(cacheKey)) {
+                            return { url: imageCache.get(cacheKey), provider: loader.name, query };
+                        }
                         const url = await loader.fn(query);
-                        if (url) return { url, provider: loader.name, query };
+                        if (url) {
+                            imageCache.set(cacheKey, url);
+                            return { url, provider: loader.name, query };
+                        }
                         if (source !== 'auto') providerUnavailableOnce(loader.name, 'sem resultados para o tema');
                     } catch (error) {
                         if (source !== 'auto') providerUnavailableOnce(loader.name, `${error.message} (${query})`, 'error');
@@ -531,10 +541,6 @@
 
                 ctx.drawImage(currentImg, x, y, w, h);
 
-                // Fake parallax layer (cinema-grade motion feel)
-                ctx.globalAlpha = 0.12;
-                ctx.drawImage(currentImg, x - 40 * (1 - eased), y - 20 * (1 - eased), w * 1.01, h * 1.01);
-                ctx.globalAlpha = 1;
             }
 
             if (style === 'cinematic') {
@@ -569,9 +575,11 @@
             ctx.fillStyle = vignette;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            if (Math.random() > 0.35) {
-                ctx.fillStyle = 'rgba(255,255,255,0.03)';
-                ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 1, 1);
+            ctx.fillStyle = 'rgba(255,255,255,0.02)';
+            for (let i = 0; i < 4; i++) {
+                const gx = (i * 311 + Math.floor(elapsed / 120)) % canvas.width;
+                const gy = (i * 197 + Math.floor(elapsed / 160)) % canvas.height;
+                ctx.fillRect(gx, gy, 1, 1);
             }
 
             if (currentText) {
@@ -612,11 +620,11 @@
             previewBtn.disabled = true;
             stopBtn.disabled = false;
 
-            addLog('GPU Pipeline: Iniciando stream de vídeo 60fps...');
+            addLog(`GPU Pipeline Lite: stream de vídeo ${TARGET_FPS}fps com otimizações de desempenho...`);
 
             try {
                 renderLoop();
-                const stream = canvas.captureStream(60);
+                const stream = canvas.captureStream(TARGET_FPS);
                 let mimeType = 'video/webm; codecs=vp9';
                 if (!MediaRecorder.isTypeSupported(mimeType)) {
                     mimeType = 'video/webm';
@@ -624,7 +632,7 @@
 
                 mediaRecorder = new MediaRecorder(stream, {
                     mimeType,
-                    videoBitsPerSecond: 8000000
+                    videoBitsPerSecond: TARGET_BITRATE
                 });
 
                 mediaRecorder.ondataavailable = (e) => {
