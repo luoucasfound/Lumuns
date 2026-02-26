@@ -150,6 +150,9 @@
         let currentText = '';
         let zoom = 1;
         let activeAudio = null;
+        let sceneStartAt = 0;
+        let sceneDurationMs = 8000;
+        const MAX_SCENE_DURATION_MS = 5 * 60 * 1000;
         const providerWarningsShown = new Set();
 
         canvas.width = 1280;
@@ -392,33 +395,100 @@
             return { url: loadImageFromPicsum(semanticSearch), provider: 'Picsum', query: semanticSearch };
         }
 
+
+        function estimateSceneDurationMs(text) {
+            const words = (text || '').trim().split(/\s+/).filter(Boolean).length;
+            const narrationMs = Math.max(6000, (words / 2.6) * 1000 + 1500);
+            return Math.min(narrationMs, MAX_SCENE_DURATION_MS);
+        }
+
+        function easeInOutCubic(t) {
+            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        }
+
+        async function speakWithLimit(text, maxMs) {
+            let timeoutId;
+            const timeoutPromise = new Promise((resolve) => {
+                timeoutId = setTimeout(() => {
+                    synth.cancel();
+                    if (activeAudio) {
+                        activeAudio.pause();
+                        activeAudio = null;
+                    }
+                    addLog('Limite de 5 minutos atingido para a cena. Avançando automaticamente.', 'error');
+                    resolve();
+                }, maxMs);
+            });
+
+            await Promise.race([speak(text), timeoutPromise]);
+            clearTimeout(timeoutId);
+        }
+
         function renderLoop() {
             if (!isProcessing) return;
             ctx.fillStyle = '#000';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+            const style = document.getElementById('style-select').value;
+            const elapsed = Math.max(0, performance.now() - sceneStartAt);
+            const t = Math.min(1, elapsed / Math.max(sceneDurationMs, 1));
+            const eased = easeInOutCubic(t);
+
             if (currentImg.complete && currentImg.src) {
-                zoom += 0.0006;
+                const baseZoom = 1.02;
+                const zoomGain = style === 'cinematic' ? 0.2 : style === 'glitch' ? 0.14 : 0.1;
+                const panX = Math.sin(elapsed / 4200) * 30;
+                const panY = Math.cos(elapsed / 5200) * 18;
+
+                zoom = baseZoom + zoomGain * eased;
                 const w = canvas.width * zoom;
                 const h = canvas.height * zoom;
-                const x = (canvas.width - w) / 2;
-                const y = (canvas.height - h) / 2;
+                const x = (canvas.width - w) / 2 + panX;
+                const y = (canvas.height - h) / 2 + panY;
+
                 ctx.drawImage(currentImg, x, y, w, h);
+
+                // Fake parallax layer (cinema-grade motion feel)
+                ctx.globalAlpha = 0.12;
+                ctx.drawImage(currentImg, x - 40 * (1 - eased), y - 20 * (1 - eased), w * 1.01, h * 1.01);
+                ctx.globalAlpha = 1;
             }
 
-            const style = document.getElementById('style-select').value;
             if (style === 'cinematic') {
-                ctx.fillStyle = 'rgba(5, 5, 20, 0.3)';
+                const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                grad.addColorStop(0, 'rgba(8, 16, 32, 0.15)');
+                grad.addColorStop(0.5, 'rgba(4, 8, 20, 0.2)');
+                grad.addColorStop(1, 'rgba(2, 4, 12, 0.32)');
+                ctx.fillStyle = grad;
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
             } else if (style === 'noir') {
                 ctx.globalCompositeOperation = 'saturation';
                 ctx.fillStyle = 'black';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 ctx.globalCompositeOperation = 'source-over';
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
             } else if (style === 'glitch') {
                 const noise = Math.floor(Math.random() * 50);
                 ctx.fillStyle = `rgba(${noise}, 0, ${noise + 40}, 0.12)`;
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
+                if (Math.random() > 0.88) {
+                    const y = Math.random() * canvas.height;
+                    ctx.fillStyle = 'rgba(59,130,246,0.15)';
+                    ctx.fillRect(0, y, canvas.width, 3 + Math.random() * 4);
+                }
+            }
+
+            // subtle vignette + film grain to emulate professional AI video finishing
+            const vignette = ctx.createRadialGradient(canvas.width / 2, canvas.height / 2, canvas.height * 0.18, canvas.width / 2, canvas.height / 2, canvas.height * 0.75);
+            vignette.addColorStop(0, 'rgba(0,0,0,0)');
+            vignette.addColorStop(1, 'rgba(0,0,0,0.28)');
+            ctx.fillStyle = vignette;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (Math.random() > 0.35) {
+                ctx.fillStyle = 'rgba(255,255,255,0.03)';
+                ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 1, 1);
             }
 
             if (currentText) {
@@ -465,7 +535,7 @@
                 const stream = canvas.captureStream(60);
                 mediaRecorder = new MediaRecorder(stream, {
                     mimeType: 'video/webm; codecs=vp9',
-                    videoBitsPerSecond: 8000000
+                    videoBitsPerSecond: 16000000
                 });
 
                 mediaRecorder.ondataavailable = (e) => {
@@ -484,7 +554,11 @@
 
                     addLog(`Render: ${step.search}`);
                     currentText = step.text;
+                    sceneStartAt = performance.now();
+                    sceneDurationMs = estimateSceneDurationMs(step.text);
                     zoom = 1.0;
+
+                    addLog(`Cena ${i + 1}: limite máximo de 5 min (${Math.round(sceneDurationMs / 1000)}s planejados).`);
 
                     const imageAsset = await resolveSceneImage(step.search || step.text);
                     addLog(`Imagem carregada via: ${imageAsset.provider} | query: ${imageAsset.query}`);
@@ -495,7 +569,7 @@
                         currentImg.onerror = resolve;
                     });
 
-                    await speak(step.text);
+                    await speakWithLimit(step.text, MAX_SCENE_DURATION_MS);
                 }
 
                 stopGeneration();
