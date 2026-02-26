@@ -89,7 +89,11 @@
                         </select>
 
                         <label class="block text-[10px] text-slate-500 mb-1 mono uppercase">Voz do Narrador</label>
-                        <select id="voice-select" class="w-full bg-slate-900 border border-slate-700 p-2 rounded text-xs mono mb-4 outline-none focus:border-blue-500 transition-colors"></select>
+                        <select id="voice-select" class="w-full bg-slate-900 border border-slate-700 p-2 rounded text-xs mono mb-2 outline-none focus:border-blue-500 transition-colors"></select>
+                        <label class="flex items-center gap-2 text-[10px] text-slate-500 mono uppercase mt-2 mb-3">
+                            <input type="checkbox" id="mute-tts" class="accent-blue-500">
+                            Sem Narração (Modo Visual)
+                        </label>
 
                         <label class="block text-[10px] text-slate-500 mb-1 mono uppercase">Estilo Visual</label>
                         <select id="style-select" class="w-full bg-slate-900 border border-slate-700 p-2 rounded text-xs mono outline-none focus:border-blue-500 transition-colors">
@@ -100,6 +104,9 @@
                     </div>
 
                     <div class="pt-4 border-t border-slate-800 space-y-2">
+                        <button id="preview-btn" class="w-full bg-slate-800 hover:bg-slate-700 py-3 rounded-lg font-black mono text-xs transition-all shadow-lg disabled:opacity-30 disabled:cursor-not-allowed" disabled>
+                            PREVIEW (2 CENAS)
+                        </button>
                         <button id="start-btn" class="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-lg font-black mono text-sm transition-all shadow-lg disabled:opacity-30 disabled:cursor-not-allowed" disabled>
                             GERAR DOCUMENTÁRIO & VÍDEO
                         </button>
@@ -124,6 +131,7 @@
         const ctx = canvas.getContext('2d');
         const log = document.getElementById('log');
         const startBtn = document.getElementById('start-btn');
+        const previewBtn = document.getElementById('preview-btn');
         const stopBtn = document.getElementById('stop-btn');
         const fileInput = document.getElementById('file-input');
         const dropZone = document.getElementById('drop-zone');
@@ -153,6 +161,7 @@
         let sceneStartAt = 0;
         let sceneDurationMs = 8000;
         const MAX_SCENE_DURATION_MS = 5 * 60 * 1000;
+        const MAX_SCENES = 25;
         const providerWarningsShown = new Set();
 
         canvas.width = 1280;
@@ -197,6 +206,7 @@
 
         ttsProviderSelect.onchange = () => {
             loadVoices();
+            saveSettings();
             addLog(`Motor de voz alterado para: ${ttsProviderSelect.value}`);
         };
 
@@ -215,6 +225,7 @@
                 if (scriptSteps && scriptSteps.length > 0) {
                     addLog(`Roteiro estruturado: ${scriptSteps.length} cenas identificadas.`);
                     startBtn.disabled = false;
+                    previewBtn.disabled = false;
                     dropZone.classList.add('hidden');
                 } else {
                     addLog('Erro estrutural no manifesto. Reprocessando...', 'error');
@@ -273,7 +284,7 @@
             }
             if (bucket) scenes.push(bucket);
 
-            return scenes.slice(0, 40).map(text => ({ text, search: normalizeSearchTerm(text) }));
+            return scenes.slice(0, MAX_SCENES).map(text => ({ text, search: normalizeSearchTerm(text) }));
         }
 
         async function processScriptWithAI(rawText) {
@@ -303,7 +314,7 @@
                 if (!resultText) throw new Error('Resposta vazia da Gemini.');
 
                 const parsed = JSON.parse(resultText)
-                    .slice(0, 40)
+                    .slice(0, MAX_SCENES)
                     .map(step => ({
                         text: (step.text || '').trim(),
                         search: (step.search || normalizeSearchTerm(step.text)).trim()
@@ -440,7 +451,7 @@
                 const panX = Math.sin(elapsed / 4200) * 30;
                 const panY = Math.cos(elapsed / 5200) * 18;
 
-                zoom = baseZoom + zoomGain * eased;
+                zoom = Math.min(baseZoom + zoomGain * eased, 1.18);
                 const w = canvas.width * zoom;
                 const h = canvas.height * zoom;
                 const x = (canvas.width - w) / 2 + panX;
@@ -526,6 +537,7 @@
             progressOverlay.classList.remove('translate-y-20', 'opacity-0');
             document.getElementById('rec-indicator').classList.remove('hidden');
             startBtn.disabled = true;
+            previewBtn.disabled = true;
             stopBtn.disabled = false;
 
             addLog('GPU Pipeline: Iniciando stream de vídeo 60fps...');
@@ -533,9 +545,14 @@
             try {
                 renderLoop();
                 const stream = canvas.captureStream(60);
+                let mimeType = 'video/webm; codecs=vp9';
+                if (!MediaRecorder.isTypeSupported(mimeType)) {
+                    mimeType = 'video/webm';
+                }
+
                 mediaRecorder = new MediaRecorder(stream, {
-                    mimeType: 'video/webm; codecs=vp9',
-                    videoBitsPerSecond: 16000000
+                    mimeType,
+                    videoBitsPerSecond: 8000000
                 });
 
                 mediaRecorder.ondataavailable = (e) => {
@@ -577,6 +594,7 @@
                 addLog(`FALHA NO CORE: ${err.message}`, 'error');
                 isProcessing = false;
                 startBtn.disabled = false;
+                previewBtn.disabled = false;
                 stopBtn.disabled = true;
             }
         }
@@ -611,8 +629,53 @@
         }
 
         async function speak(text) {
-            if (ttsProviderSelect.value === 'streamelements') return speakWithStreamElements(text);
+            const mute = document.getElementById('mute-tts').checked;
+            if (mute) {
+                await new Promise(resolve => setTimeout(resolve, 6000));
+                return;
+            }
+
+            if (ttsProviderSelect.value === 'streamelements') {
+                return speakWithStreamElements(text);
+            }
             return speakWithBrowser(text);
+        }
+
+        async function previewDocumentary() {
+            if (isProcessing || !scriptSteps.length) return;
+
+            isProcessing = true;
+            startBtn.disabled = true;
+            previewBtn.disabled = true;
+            stopBtn.disabled = false;
+            addLog('Preview Mode: renderizando 2 cenas sem exportação.');
+            renderLoop();
+
+            try {
+                for (let i = 0; i < Math.min(2, scriptSteps.length); i++) {
+                    const step = scriptSteps[i];
+                    currentText = step.text;
+                    sceneStartAt = performance.now();
+                    sceneDurationMs = estimateSceneDurationMs(step.text);
+                    zoom = 1.0;
+
+                    const imageAsset = await resolveSceneImage(step.search || step.text);
+                    currentImg.src = imageAsset.url;
+
+                    await new Promise((resolve) => {
+                        currentImg.onload = resolve;
+                        currentImg.onerror = resolve;
+                    });
+
+                    await speakWithLimit(step.text, MAX_SCENE_DURATION_MS);
+                }
+            } finally {
+                isProcessing = false;
+                startBtn.disabled = false;
+                previewBtn.disabled = false;
+                stopBtn.disabled = true;
+                addLog('Preview concluído.');
+            }
         }
 
         function stopGeneration(trigger = 'auto') {
@@ -631,6 +694,7 @@
             progressOverlay.classList.add('translate-y-20', 'opacity-0');
             document.getElementById('rec-indicator').classList.add('hidden');
             startBtn.disabled = false;
+            previewBtn.disabled = false;
             stopBtn.disabled = true;
             addLog(trigger === 'manual' ? 'Geração interrompida manualmente. Finalizando exportação.' : 'Processamento local concluído. Salvando documento em vídeo.');
         }
@@ -645,7 +709,34 @@
             addLog('DOCUMENTO EXPORTADO VIA GPU.');
         }
 
+        function saveSettings() {
+            localStorage.setItem('docugen_style', document.getElementById('style-select').value);
+            localStorage.setItem('docugen_image', imageSourceSelect.value);
+            localStorage.setItem('docugen_tts', ttsProviderSelect.value);
+            localStorage.setItem('docugen_mute', document.getElementById('mute-tts').checked ? '1' : '0');
+        }
+
+        function loadSettings() {
+            const style = localStorage.getItem('docugen_style');
+            const image = localStorage.getItem('docugen_image');
+            const tts = localStorage.getItem('docugen_tts');
+            const mute = localStorage.getItem('docugen_mute');
+
+            if (style) document.getElementById('style-select').value = style;
+            if (image) imageSourceSelect.value = image;
+            if (tts) ttsProviderSelect.value = tts;
+            if (mute) document.getElementById('mute-tts').checked = mute === '1';
+        }
+
+        document.getElementById('style-select').onchange = saveSettings;
+        imageSourceSelect.onchange = saveSettings;
+        document.getElementById('mute-tts').onchange = saveSettings;
+
+        loadSettings();
+        loadVoices();
+
         startBtn.onclick = generateDocumentary;
+        previewBtn.onclick = previewDocumentary;
         stopBtn.onclick = () => stopGeneration('manual');
     </script>
 </body>
