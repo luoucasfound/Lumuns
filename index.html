@@ -61,6 +61,17 @@
                         <span class="text-xs text-gray-400">✨ AI Image Prompter</span>
                         <input type="checkbox" id="ai-prompter" checked class="rounded bg-black">
                     </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-gray-400">🧠 Agent Mode (Planner + Critic)</span>
+                        <input type="checkbox" id="agent-mode" checked class="rounded bg-black">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-gray-500 mb-1">AGENT DEPTH</label>
+                        <select id="agent-depth" class="w-full bg-black/50 border border-white/10 rounded p-2 text-xs">
+                            <option value="fast">FAST (1 PASS)</option>
+                            <option value="deep" selected>DEEP (2 PASSES)</option>
+                        </select>
+                    </div>
                 </div>
             </div>
         </div>
@@ -119,6 +130,8 @@
         const progressStatus = document.getElementById('progress-status');
         const progressOverlay = document.getElementById('progress-overlay');
         const scriptInput = document.getElementById('script-input');
+        const agentModeToggle = document.getElementById('agent-mode');
+        const agentDepthSelect = document.getElementById('agent-depth');
 
         function addLog(msg, type = 'info') {
             const p = document.createElement('p');
@@ -273,14 +286,70 @@
             requestAnimationFrame(renderLoop);
         }
 
+        async function buildScenesWithAgent(rawScript) {
+            const fallback = rawScript.split(/[.!?]+/).filter(s => s.trim().length > 5).map(s => ({
+                text: s.trim(),
+                prompt: s.trim()
+            }));
+
+            if (!apiKey) {
+                addLog('Agent Mode sem API key. Fallback local de cenas ativado.');
+                return fallback;
+            }
+
+            const depth = agentDepthSelect.value;
+            const plannerPrompt = `Create a JSON array of documentary scenes from this script. Return only JSON. Format: [{"text":"...","prompt":"..."}]. Keep 6-12 scenes.\n\nSCRIPT:\n${rawScript}`;
+            const plannerSystem = 'You are a documentary planning agent. Generate scenes with narration text and visual prompts.';
+            const plannerRaw = await callGemini(plannerPrompt, plannerSystem);
+
+            let planned = [];
+            try {
+                const cleaned = plannerRaw.replace(/```json|```/g, '').trim();
+                planned = JSON.parse(cleaned);
+            } catch (_) {
+                addLog('Agent planner retornou JSON inválido. Usando fallback local.', 'error');
+                return fallback;
+            }
+
+            if (!Array.isArray(planned) || !planned.length) return fallback;
+
+            if (depth === 'deep') {
+                const criticPrompt = `Refine this JSON scene list for coherence and stronger visual prompts. Keep same JSON format only: ${JSON.stringify(planned)}`;
+                const criticSystem = 'You are a critic agent. Improve continuity, remove duplicates, and sharpen cinematic prompts.';
+                const criticRaw = await callGemini(criticPrompt, criticSystem);
+                try {
+                    const cleaned = criticRaw.replace(/```json|```/g, '').trim();
+                    const refined = JSON.parse(cleaned);
+                    if (Array.isArray(refined) && refined.length) planned = refined;
+                } catch (_) {
+                    addLog('Agent critic falhou. Mantendo plano do planner.');
+                }
+            }
+
+            const normalized = planned
+                .slice(0, 16)
+                .map(step => ({
+                    text: (step.text || '').trim(),
+                    prompt: (step.prompt || step.text || '').trim()
+                }))
+                .filter(step => step.text.length > 0);
+
+            return normalized.length ? normalized : fallback;
+        }
+
         async function startEngine(previewOnly = false) {
             const rawScript = scriptInput.value;
             if (!rawScript) return addLog("Sem roteiro!", "error");
 
-            scriptSteps = rawScript.split(/[.!?]+/).filter(s => s.trim().length > 5).map(s => ({
-                text: s.trim(),
-                prompt: s.trim()
-            }));
+            if (agentModeToggle.checked) {
+                addLog(`Agent Mode ativo (${agentDepthSelect.value}). Construindo plano de cenas...`);
+                scriptSteps = await buildScenesWithAgent(rawScript);
+            } else {
+                scriptSteps = rawScript.split(/[.!?]+/).filter(s => s.trim().length > 5).map(s => ({
+                    text: s.trim(),
+                    prompt: s.trim()
+                }));
+            }
 
             isProcessing = true;
             startBtn.disabled = previewBtn.disabled = true;
