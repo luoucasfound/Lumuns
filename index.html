@@ -1,581 +1,611 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DocuGen Pro - Visionary Script-to-Video Engine</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DocGenIA - Studio AI Edition</title>
     <style>
-        body { background-color: #0a0a0a; color: #e5e5e5; font-family: 'Inter', sans-serif; }
-        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .accent-gradient { background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); }
-        #render-canvas { border-radius: 8px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); width: 100%; height: auto; aspect-ratio: 16/9; background: #000; }
-        @keyframes pulse-red { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        .rec-active { animation: pulse-red 1s infinite; }
-        .sparkle-button { background: linear-gradient(90deg, #6366f1, #a855f7, #ec4899); background-size: 200% auto; transition: 0.3s; }
-        .sparkle-button:hover { background-position: right center; }
+      :root {
+        --bg-main: #02020a;
+        --bg-panel: #0d0d1a;
+        --border: #334155;
+        --text: #f1f5f9;
+        --accent: #eab308;
+        --highlight: #38bdf8;
+        --danger: #ef4444;
+        --ai-glow: #a855f7;
+      }
+
+      * { box-sizing: border-box; font-family: 'Georgia', serif; }
+
+      body {
+        margin: 0;
+        background-color: var(--bg-main);
+        color: var(--text);
+        height: 100vh;
+        display: flex;
+        overflow: hidden;
+      }
+
+      .dashboard {
+        display: grid;
+        grid-template-columns: 380px 1fr;
+        grid-template-rows: 1fr auto;
+        width: 100%;
+        height: 100%;
+        gap: 1rem;
+        padding: 1rem;
+      }
+
+      .sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        overflow-y: auto;
+        padding-right: 0.5rem;
+        grid-row: 1 / -1;
+      }
+
+      .sidebar::-webkit-scrollbar { width: 6px; }
+      .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+      .module {
+        background: var(--bg-panel);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 1rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      }
+
+      h2 { margin: 0 0 0.5rem 0; font-size: 0.75rem; text-transform: uppercase; color: var(--accent); letter-spacing: 2px;}
+      
+      .brand {
+        color: var(--accent);
+        font-size: 1.5rem;
+        font-weight: 900;
+        margin-bottom: 0.5rem;
+        text-shadow: 0 0 10px rgba(234, 179, 8, 0.4);
+        text-align: center;
+      }
+      
+      .brand-sub {
+        text-align: center; font-size: 0.65rem; color: var(--highlight); letter-spacing: 3px; margin-bottom: 1rem;
+      }
+
+      .file-drop {
+        border: 1px dashed var(--border);
+        padding: 1rem;
+        text-align: center;
+        background: rgba(255,255,255,0.03);
+        cursor: pointer;
+        transition: 0.2s;
+        font-size: 0.75rem;
+        display: block;
+      }
+      .file-drop:hover { border-color: var(--accent); background: rgba(234, 179, 8, 0.05); }
+      input[type="file"] { display: none; }
+
+      select, button, textarea, input[type="text"], input[type="password"] {
+        width: 100%;
+        padding: 0.6rem;
+        margin-top: 0.5rem;
+        background: #000;
+        border: 1px solid var(--border);
+        color: white;
+        border-radius: 2px;
+        font-size: 0.85rem;
+      }
+
+      textarea { height: 90px; resize: none; border-left: 3px solid var(--accent); }
+      .input-tema { border-left: 3px solid var(--ai-glow); margin-bottom: 5px; }
+
+      .btn-ia {
+        background: #1e293b;
+        color: var(--accent); border: 1px solid var(--accent);
+        text-transform: uppercase; font-size: 0.7rem; letter-spacing: 1px;
+        cursor: pointer; transition: 0.2s;
+      }
+      .btn-ia:hover:not(:disabled) { background: var(--accent); color: #000; }
+      
+      .btn-magic {
+        border-color: var(--ai-glow); color: #d8b4fe; background: rgba(168, 85, 247, 0.1);
+      }
+      .btn-magic:hover:not(:disabled) { background: var(--ai-glow); color: #fff; box-shadow: 0 0 10px var(--ai-glow); }
+      .btn-magic:disabled { opacity: 0.5; cursor: not-allowed; }
+
+      button.play-btn {
+        background: var(--accent); color: #000; font-weight: 900;
+        padding: 1rem; font-size: 1rem; margin-top: 1rem;
+        border: none; cursor: pointer; transition: 0.2s;
+      }
+      button.play-btn:hover { background: #fde047; box-shadow: 0 0 15px rgba(234, 179, 8, 0.4); }
+
+      .log-box {
+        max-height: 120px;
+        overflow-y: auto;
+        background: rgba(0,0,0,0.35);
+        border: 1px solid #1e293b;
+        padding: 8px;
+        font-family: monospace;
+        font-size: 0.65rem;
+        color: #94a3b8;
+        margin-top: 8px;
+      }
+
+      .main-stage { display: flex; flex-direction: column; position: relative; min-height: 0; }
+
+      .player-container {
+        background: #000; flex-grow: 1; border: 1px solid var(--border);
+        position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;
+      }
+
+      .player-container::after {
+        content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: url('https://www.transparenttextures.com/patterns/stardust.png');
+        opacity: 0.15; pointer-events: none; z-index: 10;
+      }
+
+      .media-frame {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        display: flex; align-items: center; justify-content: center;
+        opacity: 0; transition: opacity 1.5s ease-in-out;
+      }
+      .media-frame.active { opacity: 1; }
+      .media-frame img, .media-frame video { min-width: 100%; min-height: 100%; object-fit: cover; }
+
+      .ken-burns { animation: kenburns 20s infinite alternate ease-in-out; }
+      @keyframes kenburns { 0% { transform: scale(1) translate(0, 0); } 100% { transform: scale(1.2) translate(-2%, -2%); } }
+
+      .preset-cinematic { filter: contrast(1.1) saturate(0.7) sepia(0.1) brightness(0.9); }
+      .preset-vintage { filter: sepia(0.6) contrast(1.1) grayscale(0.2); }
+
+      .player-caption {
+        position: absolute; bottom: 10%; width: 80%; text-align: center;
+        color: #fff; font-family: 'Arial', sans-serif; font-size: 1.8rem; text-transform: uppercase; letter-spacing: 2px;
+        text-shadow: 2px 2px 5px rgba(0,0,0,0.9), -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+        z-index: 20;
+      }
+
+      .storyboard-module {
+        background: var(--bg-panel); border: 1px solid var(--border); padding: 1rem;
+        display: flex; flex-direction: column; gap: 0.5rem; min-height: 180px;
+      }
+
+      .storyboard-header { display: flex; justify-content: space-between; align-items: center; }
+
+      .storyboard-track {
+        display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px; flex-grow: 1; align-items: center;
+      }
+
+      .thumb-item {
+        width: 140px; height: 100px; background: #000; position: relative;
+        cursor: grab; border: 2px solid #334155; border-radius: 4px; flex-shrink: 0; transition: transform 0.2s;
+      }
+      .thumb-item:active { cursor: grabbing; }
+      .thumb-item.drag-over { border-color: var(--highlight); transform: scale(1.05); }
+      .thumb-item.playing { border-color: var(--accent); box-shadow: 0 0 15px rgba(234, 179, 8, 0.5); }
+      
+      .thumb-item img, .thumb-item video { width: 100%; height: 100%; object-fit: cover; border-radius: 2px; }
+      
+      .caption-input {
+        position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.8); border: none; color: white;
+        font-size: 0.7rem; padding: 4px; text-align: center; font-family: sans-serif; margin-top: 0;
+      }
+
+      .btn-delete {
+        position: absolute; top: -5px; right: -5px; background: var(--danger); color: white; border: none;
+        border-radius: 50%; width: 22px; height: 22px; font-size: 10px; cursor: pointer; display: none; font-weight: bold; z-index: 5;
+      }
+      .thumb-item:hover .btn-delete { display: block; }
+      
+      .storyboard-track::-webkit-scrollbar { height: 8px; }
+      .storyboard-track::-webkit-scrollbar-track { background: #020617; }
+      .storyboard-track::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
     </style>
-</head>
-<body class="p-4 md:p-8">
-    <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div class="space-y-6">
-            <div class="glass p-6 rounded-2xl">
-                <h1 class="text-2xl font-bold mb-2 flex items-center gap-2 text-white">
-                    <span class="w-3 h-3 bg-blue-500 rounded-full"></span> DocuGen <span class="text-blue-400">Pro</span>
-                </h1>
-                <p class="text-xs text-gray-500 mb-6 uppercase tracking-widest">Visionary Video Automaton</p>
-                
-                <div class="space-y-4">
-                    <div>
-                        <div class="flex justify-between items-center mb-1">
-                            <label class="block text-xs font-semibold text-gray-400">SCRIPT INPUT</label>
-                            <button id="ai-enhance-btn" class="text-[10px] sparkle-button px-2 py-0.5 rounded text-white font-bold">✨ ENHANCE SCRIPT</button>
-                        </div>
-                        <textarea id="script-input" rows="6" class="w-full bg-black/50 border border-white/10 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Paste a topic or a draft script..."></textarea>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-2">
-                        <button id="preview-btn" class="bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-lg transition-all text-sm">PREVIEW</button>
-                        <button id="start-btn" class="accent-gradient hover:opacity-90 text-white font-bold py-3 rounded-lg transition-all text-sm">GENERATE</button>
-                    </div>
-                    
-                    <button id="stop-btn" disabled class="w-full bg-red-500/20 hover:bg-red-500/40 text-red-400 font-bold py-2 rounded-lg transition-all text-xs disabled:opacity-30">ABORT PROCESS</button>
-                </div>
-            </div>
-
-            <div class="glass p-6 rounded-2xl space-y-4">
-                <h2 class="text-sm font-bold text-gray-300">ENGINE SETTINGS</h2>
-                <div class="space-y-3">
-                    <div>
-                        <label class="block text-[10px] text-gray-500 mb-1">TTS PROVIDER</label>
-                        <select id="tts-provider" class="w-full bg-black/50 border border-white/10 rounded p-2 text-xs">
-                            <option value="gemini">Gemini Neural (Kore)</option>
-                            <option value="browser">System Native (WebSpeech)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-gray-500 mb-1">GEMINI API KEY</label>
-                        <input id="gemini-key" type="password" class="w-full bg-black/50 border border-white/10 rounded p-2 text-xs" placeholder="AIza...">
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs text-gray-400">Mute Audio Output</span>
-                        <input type="checkbox" id="mute-tts" class="rounded bg-black">
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs text-gray-400">✨ AI Image Prompter</span>
-                        <input type="checkbox" id="ai-prompter" checked class="rounded bg-black">
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs text-gray-400">🧠 Agent Mode (Planner + Critic)</span>
-                        <input type="checkbox" id="agent-mode" checked class="rounded bg-black">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-gray-500 mb-1">AGENT DEPTH</label>
-                        <select id="agent-depth" class="w-full bg-black/50 border border-white/10 rounded p-2 text-xs">
-                            <option value="fast">FAST (1 PASS)</option>
-                            <option value="deep" selected>DEEP (2 PASSES)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-gray-500 mb-1">MAX SCENES</label>
-                        <input id="max-scenes" type="number" min="2" max="30" value="12" class="w-full bg-black/50 border border-white/10 rounded p-2 text-xs">
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs text-gray-400">Save settings locally</span>
-                        <input type="checkbox" id="persist-settings" checked class="rounded bg-black">
-                    </div>
-                </div>
-            </div>
+  </head>
+  <body>
+    <div class="dashboard">
+      <div class="sidebar">
+        <div>
+          <div class="brand">DOCGENIA</div>
+          <div class="brand-sub">STUDIO AI POWERED</div>
         </div>
 
-        <div class="lg:col-span-2 space-y-6">
-            <div class="relative group">
-                <canvas id="render-canvas" width="1280" height="720"></canvas>
-                <div id="rec-indicator" class="hidden absolute top-4 left-4 flex items-center gap-2 bg-black/60 px-3 py-1 rounded-full border border-red-500/50">
-                    <span class="w-2 h-2 bg-red-500 rounded-full rec-active"></span>
-                    <span class="text-[10px] font-bold text-red-500 tracking-tighter">REC ● MP4(H264) EMULATED</span>
-                </div>
-            </div>
-
-            <div id="progress-overlay" class="glass p-6 rounded-2xl opacity-0 translate-y-4 transition-all duration-500">
-                <div class="flex justify-between items-end mb-2">
-                    <div>
-                        <p id="progress-status" class="text-xs font-mono text-blue-400 italic">IDLE</p>
-                        <h3 class="text-lg font-bold">Processing Pipeline...</h3>
-                    </div>
-                    <span id="progress-percent" class="text-2xl font-black text-white">0%</span>
-                </div>
-                <div class="w-full bg-white/5 h-2 rounded-full overflow-hidden">
-                    <div id="progress-bar" class="h-full accent-gradient transition-all duration-300" style="width: 0%"></div>
-                </div>
-            </div>
-
-            <div class="glass p-4 rounded-xl max-h-48 overflow-y-auto font-mono text-[10px] text-gray-500 space-y-1" id="log-console">
-                <p>> System initialized. MP4 Container mode enabled.</p>
-            </div>
-            <button id="clear-log-btn" class="w-full bg-white/5 hover:bg-white/10 text-gray-300 text-xs py-2 rounded-lg">CLEAR LOG</button>
+        <div class="module">
+          <h2>1. Roteirista IA</h2>
+          <input type="text" id="apiKeyInput" placeholder="Gemini API Key (opcional)">
+          <input type="text" id="scriptTopic" class="input-tema" placeholder="Ex: O segredo da Atlântida...">
+          <button class="btn-ia btn-magic" id="btnGerarRoteiro">✨ Escrever Roteiro</button>
+          <textarea id="scriptContent" placeholder="O roteiro gerado ou editado manualmente aparecerá aqui..."></textarea>
+          <button class="btn-ia" id="btnGerarVoz" style="margin-top: 5px;">Gerar Voz (TTS)</button>
+          <div class="log-box" id="logBox"></div>
         </div>
+
+        <div class="module">
+          <h2>2. Evidências Visuais</h2>
+          <label class="file-drop">
+            + Adicionar Fotos/Vídeos
+            <input type="file" id="uploadMedia" accept="image/*,video/*" multiple>
+          </label>
+        </div>
+
+        <div class="module">
+          <h2>3. Áudio & Mixagem</h2>
+          <label class="file-drop">
+            + Adicionar Trilha (BGM)
+            <input type="file" id="uploadAudio" accept="audio/*">
+          </label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+            <label style="font-size: 0.6rem;">VOZ <input type="range" id="volVoz" min="0" max="1" step="0.1" value="1"></label>
+            <label style="font-size: 0.6rem;">BGM <input type="range" id="volTrilha" min="0" max="1" step="0.1" value="0.4"></label>
+          </div>
+        </div>
+
+        <div class="module">
+          <h2>4. Exportação</h2>
+          <select id="tonePreset">
+            <option value="cinematic">Filtro: Documentário Moderno</option>
+            <option value="vintage">Filtro: Arquivo Perdido</option>
+            <option value="none">Filtro: Cru</option>
+          </select>
+          <select id="cutPace">
+            <option value="5000" selected>Duração do Clip: 5s</option>
+            <option value="8000">Duração do Clip: 8s</option>
+          </select>
+          <button class="btn-ia" id="btnExportProject">Exportar Projeto (.json)</button>
+          <button class="play-btn" id="btnPlay">▶ INICIAR RENDERIZAÇÃO</button>
+        </div>
+      </div>
+
+      <div class="main-stage">
+        <div class="player-container" id="playerContainer">
+          <div id="placeholder" style="color:#222; font-size: 1.2rem; letter-spacing: 5px; font-weight: bold;">SISTEMA PRONTO</div>
+        </div>
+      </div>
+
+      <div class="storyboard-module">
+        <div class="storyboard-header">
+          <h2>Storyboard (Arraste para Reordenar)</h2>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <span id="mediaCount" style="font-size: 0.7rem; color: #64748b;">0 clipes</span>
+            <button class="btn-ia btn-magic" id="btnGerarLegendas" style="margin: 0; padding: 4px 8px; width: auto;">✨ Auto-Legendas IA</button>
+          </div>
+        </div>
+        <div class="storyboard-track" id="storyboardTrack">
+          <div style="color: #334155; font-size: 0.8rem; margin: auto;">Adicione mídias na barra lateral para começar...</div>
+        </div>
+      </div>
     </div>
 
     <script>
-        let warnedVisualNoKey = false;
-        const warnedVisualError = new Set();
-        const TARGET_FPS = 30;
-        const canvas = document.getElementById('render-canvas');
-        const ctx = canvas.getContext('2d', { alpha: false });
-        const logConsole = document.getElementById('log-console');
-        
-        let isProcessing = false;
-        let scriptSteps = [];
-        let currentImg = new Image();
-        let currentText = "";
-        let sceneStartAt = 0;
-        let sceneDurationMs = 5000;
-        let mediaRecorder;
-        let recordedChunks = [];
-        let activeAudio = null;
-        let isPreviewMode = false;
+      const state = {
+        mediaFiles: [],
+        bgmUrl: null,
+        voiceUrl: null,
+        isPlaying: false,
+        mediaInterval: null,
+        currentMediaIndex: 0
+      };
 
-        const startBtn = document.getElementById('start-btn');
-        const previewBtn = document.getElementById('preview-btn');
-        const stopBtn = document.getElementById('stop-btn');
-        const aiEnhanceBtn = document.getElementById('ai-enhance-btn');
-        const progressBar = document.getElementById('progress-bar');
-        const progressPercent = document.getElementById('progress-percent');
-        const progressStatus = document.getElementById('progress-status');
-        const progressOverlay = document.getElementById('progress-overlay');
-        const scriptInput = document.getElementById('script-input');
-        const geminiKeyInput = document.getElementById('gemini-key');
-        const agentModeToggle = document.getElementById('agent-mode');
-        const agentDepthSelect = document.getElementById('agent-depth');
-        const maxScenesInput = document.getElementById('max-scenes');
-        const persistSettingsToggle = document.getElementById('persist-settings');
-        const clearLogBtn = document.getElementById('clear-log-btn');
+      const scriptArea = document.getElementById('scriptContent');
+      const playerContainer = document.getElementById('playerContainer');
+      const storyboardTrack = document.getElementById('storyboardTrack');
+      const logBox = document.getElementById('logBox');
+      const apiKeyInput = document.getElementById('apiKeyInput');
+      let bgmAudio = new Audio();
+      let voAudio = new Audio();
 
-        function addLog(msg, type = 'info') {
-            const p = document.createElement('p');
-            p.className = type === 'error' ? 'text-red-400' : 'text-gray-500';
-            p.innerText = `> [${new Date().toLocaleTimeString()}] ${msg}`;
-            logConsole.appendChild(p);
-            logConsole.scrollTop = logConsole.scrollHeight;
-        }
+      function getApiKey() {
+        return (apiKeyInput.value || '').trim();
+      }
 
-        function getApiKey() {
-            return (geminiKeyInput.value || '').trim();
-        }
+      function log(msg, isError = false) {
+        const line = document.createElement('div');
+        line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        if (isError) line.style.color = '#f87171';
+        logBox.appendChild(line);
+        logBox.scrollTop = logBox.scrollHeight;
+      }
 
-        function getMaxScenes() {
-            const n = Number(maxScenesInput.value || 12);
-            return Math.min(30, Math.max(2, Number.isFinite(n) ? n : 12));
-        }
-
-        function splitScriptIntoScenes(rawScript) {
-            return rawScript
-                .split(/\n+|[.!?]+/)
-                .map(s => s.trim())
-                .filter(s => s.length > 12)
-                .slice(0, getMaxScenes())
-                .map(s => ({ text: s, prompt: s }));
-        }
-
-        function saveSettings() {
-            if (!persistSettingsToggle.checked) return;
-            localStorage.setItem('docugen_tts_provider', document.getElementById('tts-provider').value);
-            localStorage.setItem('docugen_mute_tts', document.getElementById('mute-tts').checked ? '1' : '0');
-            localStorage.setItem('docugen_ai_prompter', document.getElementById('ai-prompter').checked ? '1' : '0');
-            localStorage.setItem('docugen_agent_mode', agentModeToggle.checked ? '1' : '0');
-            localStorage.setItem('docugen_agent_depth', agentDepthSelect.value);
-            localStorage.setItem('docugen_max_scenes', String(getMaxScenes()));
-            localStorage.setItem('docugen_persist_settings', persistSettingsToggle.checked ? '1' : '0');
-            localStorage.setItem('docugen_gemini_key', geminiKeyInput.value || '');
-        }
-
-        function loadSettings() {
-            const persist = localStorage.getItem('docugen_persist_settings');
-            if (persist !== null) persistSettingsToggle.checked = persist === '1';
-            if (!persistSettingsToggle.checked) return;
-            const tts = localStorage.getItem('docugen_tts_provider');
-            const mute = localStorage.getItem('docugen_mute_tts');
-            const prompter = localStorage.getItem('docugen_ai_prompter');
-            const agentMode = localStorage.getItem('docugen_agent_mode');
-            const agentDepth = localStorage.getItem('docugen_agent_depth');
-            const maxScenes = localStorage.getItem('docugen_max_scenes');
-            const key = localStorage.getItem('docugen_gemini_key');
-            if (tts) document.getElementById('tts-provider').value = tts;
-            if (mute) document.getElementById('mute-tts').checked = mute === '1';
-            if (prompter) document.getElementById('ai-prompter').checked = prompter === '1';
-            if (agentMode) agentModeToggle.checked = agentMode === '1';
-            if (agentDepth) agentDepthSelect.value = agentDepth;
-            if (maxScenes) maxScenesInput.value = maxScenes;
-            if (key) geminiKeyInput.value = key;
-        }
-
-        async function callGemini(prompt, systemInstruction = "") {
-            if (!getApiKey()) return "";
-            try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${getApiKey()}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }],
-                        systemInstruction: systemInstruction ? { parts: [{ text: systemInstruction }] } : undefined
-                    })
-                });
-                const result = await response.json();
-                return result.candidates?.[0]?.content?.parts?.[0]?.text || "";
-            } catch (e) {
-                console.error("Gemini call failed", e);
-                return "";
-            }
-        }
-
-        async function enhanceScript() {
-            const currentVal = scriptInput.value.trim();
-            if (!currentVal) return addLog("Input a topic first.", "error");
-            aiEnhanceBtn.disabled = true;
-            aiEnhanceBtn.innerText = "✨ ENHANCING...";
-            const enhanced = await callGemini(
-                `Rewrite this as a compelling documentary script: "${currentVal}". 5-8 sentences. No headers.`,
-                "Expert scriptwriter."
-            );
-            if (enhanced) scriptInput.value = enhanced.trim();
-            aiEnhanceBtn.disabled = false;
-            aiEnhanceBtn.innerText = "✨ ENHANCE SCRIPT";
-        }
-
-        async function generateImage(prompt) {
-            addLog(`Requesting Visual: ${prompt.substring(0, 30)}...`);
-
-            if (!getApiKey()) {
-                if (!warnedVisualNoKey) {
-                    warnedVisualNoKey = true;
-                    addLog('Gemini key ausente: usando fallback visual online (Picsum).');
-                }
-                const seed = encodeURIComponent((prompt || 'documentary').slice(0, 80));
-                return `https://picsum.photos/seed/${seed}/1280/720`;
-            }
-
-            try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${getApiKey()}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        instances: [{ prompt: `Photorealistic cinematic documentary: ${prompt}` }],
-                        parameters: { sampleCount: 1 }
-                    })
-                });
-
-                const result = await response.json();
-                const bytes = result?.predictions?.[0]?.bytesBase64Encoded;
-                if (!response.ok || !bytes) {
-                    const reason = result?.error?.message || result?.message || 'No predictions';
-                    const dedupe = `${response.status}:${reason}`;
-                    if (!warnedVisualError.has(dedupe)) {
-                        warnedVisualError.add(dedupe);
-                        addLog(`Visual API indisponível (${response.status || 'n/a'}): ${reason}. Fallback ativado.`, 'error');
-                    }
-                    const seed = encodeURIComponent((prompt || 'documentary').slice(0, 80));
-                    return `https://picsum.photos/seed/${seed}/1280/720`;
-                }
-
-                return `data:image/png;base64,${bytes}`;
-            } catch (e) {
-                const dedupe = `fetch:${e?.message || 'network error'}`;
-                if (!warnedVisualError.has(dedupe)) {
-                    warnedVisualError.add(dedupe);
-                    addLog(`Visual API falhou em rede: ${e?.message || 'erro desconhecido'}. Fallback ativado.`, 'error');
-                }
-                const seed = encodeURIComponent((prompt || 'documentary').slice(0, 80));
-                return `https://picsum.photos/seed/${seed}/1280/720`;
-            }
-        }
-
-        async function geminiTTS(text) {
-            if (!getApiKey()) return null;
-            try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${getApiKey()}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: `Say in a cinematic voice: ${text}` }] }],
-                        generationConfig: {
-                            responseModalities: ["AUDIO"],
-                            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } }
-                        }
-                    })
-                });
-                const result = await response.json();
-                return pcmToWav(result.candidates[0].content.parts[0].inlineData.data, 24000);
-            } catch (e) { return null; }
-        }
-
-        function pcmToWav(base64Pcm, sampleRate) {
-            const binaryString = atob(base64Pcm);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-            const wavHeader = new ArrayBuffer(44);
-            const view = new DataView(wavHeader);
-            view.setUint32(0, 0x52494646, false);
-            view.setUint32(4, 36 + bytes.length, true);
-            view.setUint32(8, 0x57415645, false);
-            view.setUint32(12, 0x666d7420, false);
-            view.setUint32(16, 16, true);
-            view.setUint16(20, 1, true);
-            view.setUint16(22, 1, true);
-            view.setUint32(24, sampleRate, true);
-            view.setUint32(28, sampleRate * 2, true);
-            view.setUint16(32, 2, true);
-            view.setUint16(34, 16, true);
-            view.setUint32(36, 0x64617461, false);
-            view.setUint32(40, bytes.length, true);
-            return URL.createObjectURL(new Blob([wavHeader, bytes], { type: 'audio/wav' }));
-        }
-
-        function renderLoop() {
-            if (!isProcessing) return;
-
-            ctx.fillStyle = '#000000';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            if (currentImg.src && currentImg.complete) {
-                const elapsed = performance.now() - sceneStartAt;
-                const progress = Math.min(elapsed / sceneDurationMs, 1);
-                const scale = 1 + (progress * 0.15);
-
-                ctx.save();
-                ctx.translate(canvas.width / 2, canvas.height / 2);
-                ctx.scale(scale, scale);
-                const imgAspect = currentImg.width / currentImg.height;
-                const canvasAspect = canvas.width / canvas.height;
-                let drawW = canvas.width;
-                let drawH = canvas.height;
-
-                if (imgAspect > canvasAspect) drawW = canvas.height * imgAspect;
-                else drawH = canvas.width / imgAspect;
-
-                ctx.drawImage(currentImg, -drawW / 2, -drawH / 2, drawW, drawH);
-                ctx.restore();
-            }
-
-            const grad = ctx.createLinearGradient(0, canvas.height * 0.6, 0, canvas.height);
-            grad.addColorStop(0, 'rgba(0,0,0,0)');
-            grad.addColorStop(1, 'rgba(0,0,0,0.9)');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, canvas.height * 0.5, canvas.width, canvas.height * 0.5);
-
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 42px Inter, system-ui, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.shadowColor = 'black';
-            ctx.shadowBlur = 15;
-
-            const words = currentText.split(' ');
-            let line = '';
-            let yPos = canvas.height - 130;
-            for (let n = 0; n < words.length; n++) {
-                let testLine = line + words[n] + ' ';
-                if (ctx.measureText(testLine).width > canvas.width - 200 && n > 0) {
-                    ctx.fillText(line.trim(), canvas.width / 2, yPos);
-                    line = words[n] + ' ';
-                    yPos += 55;
-                } else line = testLine;
-            }
-            ctx.fillText(line.trim(), canvas.width / 2, yPos);
-
-            requestAnimationFrame(renderLoop);
-        }
-
-        async function buildScenesWithAgent(rawScript) {
-            const fallback = splitScriptIntoScenes(rawScript);
-
-            if (!getApiKey()) {
-                addLog('Agent Mode sem API key. Fallback local de cenas ativado.');
-                return fallback;
-            }
-
-            const depth = agentDepthSelect.value;
-            const plannerPrompt = `Create a JSON array of documentary scenes from this script. Return only JSON. Format: [{"text":"...","prompt":"..."}]. Keep 6-12 scenes.\n\nSCRIPT:\n${rawScript}`;
-            const plannerSystem = 'You are a documentary planning agent. Generate scenes with narration text and visual prompts.';
-            const plannerRaw = await callGemini(plannerPrompt, plannerSystem);
-
-            let planned = [];
-            try {
-                const cleaned = plannerRaw.replace(/```json|```/g, '').trim();
-                planned = JSON.parse(cleaned);
-            } catch (_) {
-                addLog('Agent planner retornou JSON inválido. Usando fallback local.', 'error');
-                return fallback;
-            }
-
-            if (!Array.isArray(planned) || !planned.length) return fallback;
-
-            if (depth === 'deep') {
-                const criticPrompt = `Refine this JSON scene list for coherence and stronger visual prompts. Keep same JSON format only: ${JSON.stringify(planned)}`;
-                const criticSystem = 'You are a critic agent. Improve continuity, remove duplicates, and sharpen cinematic prompts.';
-                const criticRaw = await callGemini(criticPrompt, criticSystem);
-                try {
-                    const cleaned = criticRaw.replace(/```json|```/g, '').trim();
-                    const refined = JSON.parse(cleaned);
-                    if (Array.isArray(refined) && refined.length) planned = refined;
-                } catch (_) {
-                    addLog('Agent critic falhou. Mantendo plano do planner.');
-                }
-            }
-
-            const normalized = planned
-                .slice(0, getMaxScenes())
-                .map(step => ({
-                    text: (step.text || '').trim(),
-                    prompt: (step.prompt || step.text || '').trim()
-                }))
-                .filter(step => step.text.length > 0);
-
-            return normalized.length ? normalized : fallback;
-        }
-
-        async function startEngine(previewOnly = false) {
-            const rawScript = scriptInput.value;
-            if (!rawScript) return addLog("Sem roteiro!", "error");
-
-            if (agentModeToggle.checked) {
-                addLog(`Agent Mode ativo (${agentDepthSelect.value}). Construindo plano de cenas...`);
-                scriptSteps = await buildScenesWithAgent(rawScript);
-            } else {
-                scriptSteps = splitScriptIntoScenes(rawScript);
-            }
-
-            isProcessing = true;
-            isPreviewMode = previewOnly;
-            saveSettings();
-            startBtn.disabled = previewBtn.disabled = true;
-            stopBtn.disabled = false;
-            progressOverlay.classList.remove('opacity-0', 'translate-y-4');
-            document.getElementById('rec-indicator').classList.remove('hidden');
-
-            if (!previewOnly) {
-                const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=h264')
-                    ? 'video/webm;codecs=h264'
-                    : 'video/webm;codecs=vp9';
-
-                const stream = canvas.captureStream(TARGET_FPS);
-                mediaRecorder = new MediaRecorder(stream, {
-                    mimeType: mimeType,
-                    videoBitsPerSecond: 5000000
-                });
-
-                recordedChunks = [];
-                mediaRecorder.ondataavailable = e => { if(e.data.size > 0) recordedChunks.push(e.data); };
-                mediaRecorder.start(100);
-            } else {
-                mediaRecorder = null;
-                recordedChunks = [];
-                addLog('Preview mode: gravação desativada.');
-            }
-
-            requestAnimationFrame(renderLoop);
-
-            const limit = Math.min(previewOnly ? 2 : scriptSteps.length, getMaxScenes());
-            const useAiPrompter = document.getElementById('ai-prompter').checked;
-
-            for (let i = 0; i < limit; i++) {
-                if (!isProcessing) break;
-                const step = scriptSteps[i];
-                progressStatus.innerText = `PROCESSANDO CENA ${i+1}/${limit}`;
-                progressBar.style.width = `${Math.round((i / limit) * 100)}%`;
-                progressPercent.innerText = `${Math.round((i / limit) * 100)}%`;
-
-                let visualPrompt = step.prompt;
-                if (useAiPrompter) {
-                    const aiPrompt = await callGemini(
-                        `Describe a cinematic image for: "${step.text}". Max 30 words.`,
-                        "Cinematographer assistant."
-                    );
-                    if (aiPrompt) visualPrompt = aiPrompt;
-                }
-
-                const imgUrl = await generateImage(visualPrompt);
-                const loader = new Promise(r => {
-                    currentImg.onload = r;
-                    currentImg.onerror = r;
-                    currentImg.src = imgUrl;
-                });
-                await loader;
-
-                currentText = step.text;
-                sceneStartAt = performance.now();
-                sceneDurationMs = Math.max(4000, step.text.length * 90);
-
-                await new Promise(async resolve => {
-                    if (document.getElementById('mute-tts').checked) {
-                        setTimeout(resolve, sceneDurationMs);
-                    } else {
-                        const provider = document.getElementById('tts-provider').value;
-                        let audioUrl = (provider === 'gemini') ? await geminiTTS(step.text) : null;
-                        if (audioUrl) {
-                            activeAudio = new Audio(audioUrl);
-                            activeAudio.onended = resolve;
-                            activeAudio.onerror = resolve;
-                            activeAudio.play().catch(resolve);
-                        } else {
-                            const utterance = new SpeechSynthesisUtterance(step.text);
-                            utterance.onend = resolve;
-                            utterance.onerror = resolve;
-                            window.speechSynthesis.speak(utterance);
-                        }
-                    }
-                });
-            }
-            progressBar.style.width = '100%';
-            progressPercent.innerText = '100%';
-            finishProcess();
-        }
-
-        function finishProcess() {
-            isProcessing = false;
-            startBtn.disabled = previewBtn.disabled = false;
-            stopBtn.disabled = true;
-            document.getElementById('rec-indicator').classList.add('hidden');
-
-            if (activeAudio) {
-                activeAudio.pause();
-                activeAudio = null;
-            }
-            window.speechSynthesis.cancel();
-
-            if (isPreviewMode) {
-                addLog('Preview finalizado. Nenhum arquivo exportado.');
-                return;
-            }
-
-            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                mediaRecorder.onstop = () => {
-                    const blob = new Blob(recordedChunks, { type: 'video/webm' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `DocuGen_Video_${Date.now()}.webm`;
-                    a.click();
-                    addLog("Vídeo exportado com sucesso (.webm).");
-                };
-                mediaRecorder.stop();
-            }
-        }
-
-        clearLogBtn.onclick = () => {
-            logConsole.innerHTML = '<p>> Log limpo.</p>';
-        };
-
-        ['tts-provider', 'mute-tts', 'ai-prompter', 'agent-mode', 'agent-depth', 'max-scenes', 'persist-settings', 'gemini-key'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.addEventListener('change', saveSettings);
+      async function geminiRequest(payload, endpoint, extra = {}) {
+        const key = getApiKey();
+        if (!key) throw new Error('API key ausente');
+        const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${endpoint}?key=${key}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(extra.headers || {}) },
+          body: JSON.stringify(payload)
         });
+        const data = await resp.json();
+        if (!resp.ok) {
+          const reason = data?.error?.message || `HTTP ${resp.status}`;
+          throw new Error(reason);
+        }
+        return data;
+      }
 
-        loadSettings();
+      function safeJsonParse(input) {
+        if (!input) return null;
+        const cleaned = input.replace(/```json|```/g, '').trim();
+        try { return JSON.parse(cleaned); } catch { return null; }
+      }
 
-        aiEnhanceBtn.onclick = enhanceScript;
-        stopBtn.onclick = () => { isProcessing = false; finishProcess(); };
-        startBtn.onclick = () => startEngine(false);
-        previewBtn.onclick = () => startEngine(true);
+      document.getElementById('btnGerarRoteiro').onclick = async () => {
+        const topic = document.getElementById('scriptTopic').value.trim();
+        if (!topic) return alert('Por favor, insira um tema primeiro.');
+
+        const btn = document.getElementById('btnGerarRoteiro');
+        const originalText = btn.innerText;
+        btn.innerText = '✨ ESCREVENDO...';
+        btn.disabled = true;
+
+        const prompt = `Aja como um produtor/narrador do History Channel (estilo Alienígenas do Passado). Escreva um roteiro dramático e misterioso sobre o seguinte tema: "${topic}". Use perguntas retóricas (ex: "E se...?", "Poderia ser que...?"). Máximo de 3 parágrafos curtos. Não inclua introduções como "Aqui está o roteiro", apenas o texto puro da narração.`;
+
+        try {
+          const data = await geminiRequest({ contents: [{ parts: [{ text: prompt }] }] }, 'gemini-2.5-flash-preview-09-2025:generateContent');
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) scriptArea.value = text.trim();
+          log('Roteiro IA gerado com sucesso.');
+        } catch (error) {
+          log(`Erro ao gerar roteiro: ${error.message}`, true);
+          alert('Erro ao conectar com Gemini IA. Verifique API key.');
+        } finally {
+          btn.innerText = originalText;
+          btn.disabled = false;
+        }
+      };
+
+      document.getElementById('btnGerarLegendas').onclick = async () => {
+        if (state.mediaFiles.length === 0) return alert('Adicione evidências visuais (clipes) primeiro.');
+
+        const currentScript = scriptArea.value.trim() || 'Mistérios não resolvidos da humanidade e anomalias históricas.';
+        const count = state.mediaFiles.length;
+
+        const btn = document.getElementById('btnGerarLegendas');
+        const originalText = btn.innerText;
+        btn.innerText = '✨ GERANDO...';
+        btn.disabled = true;
+
+        const prompt = `Baseado no seguinte roteiro de documentário: "${currentScript}".
+Preciso de legendas curtas para ${count} cenas de vídeo.
+As legendas devem ser frases de impacto de mistério/teoria da conspiração (MÁXIMO 4 palavras cada).
+Retorne estritamente um Array JSON válido com ${count} strings.
+Exemplo: ["Sinal Desconhecido", "Artefato Perdido", "A Verdade Oculta"]`;
+
+        try {
+          const data = await geminiRequest({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: 'application/json' }
+          }, 'gemini-2.5-flash-preview-09-2025:generateContent');
+
+          const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          const captionsArray = safeJsonParse(jsonText);
+
+          if (!Array.isArray(captionsArray)) throw new Error('JSON de legendas inválido');
+
+          state.mediaFiles.forEach((media, index) => {
+            if (captionsArray[index]) media.caption = String(captionsArray[index]);
+          });
+          renderStoryboard();
+          log('Legendas geradas e aplicadas.');
+        } catch (error) {
+          log(`Erro ao gerar legendas: ${error.message}`, true);
+          alert('Erro ao gerar legendas com IA.');
+        } finally {
+          btn.innerText = originalText;
+          btn.disabled = false;
+        }
+      };
+
+      function generateId() { return 'clip_' + Math.random().toString(36).substr(2, 9); }
+
+      function renderStoryboard() {
+        document.getElementById('mediaCount').innerText = `${state.mediaFiles.length} clipes`;
+        if (state.mediaFiles.length === 0) {
+          storyboardTrack.innerHTML = '<div style="color: #334155; font-size: 0.8rem; margin: auto;">Adicione mídias na barra lateral para começar...</div>';
+          return;
+        }
+
+        storyboardTrack.innerHTML = '';
+        state.mediaFiles.forEach((media, index) => {
+          const thumb = document.createElement('div');
+          thumb.className = `thumb-item ${state.isPlaying && (state.currentMediaIndex % state.mediaFiles.length === index) ? 'playing' : ''}`;
+          thumb.draggable = true;
+          thumb.dataset.index = index;
+
+          const el = document.createElement(media.type === 'video' ? 'video' : 'img');
+          el.src = media.url;
+          thumb.appendChild(el);
+
+          const delBtn = document.createElement('button');
+          delBtn.className = 'btn-delete';
+          delBtn.innerText = 'X';
+          delBtn.onclick = () => { state.mediaFiles.splice(index, 1); renderStoryboard(); };
+          thumb.appendChild(delBtn);
+
+          const capInput = document.createElement('input');
+          capInput.className = 'caption-input';
+          capInput.type = 'text';
+          capInput.placeholder = 'Legenda...';
+          capInput.value = media.caption || '';
+          capInput.oninput = (e) => { state.mediaFiles[index].caption = e.target.value; };
+          thumb.appendChild(capInput);
+
+          thumb.ondragstart = (e) => { e.dataTransfer.setData('text/plain', index); setTimeout(() => thumb.style.opacity = '0.4', 0); };
+          thumb.ondragend = () => { thumb.style.opacity = '1'; };
+          thumb.ondragover = (e) => { e.preventDefault(); thumb.classList.add('drag-over'); };
+          thumb.ondragleave = () => { thumb.classList.remove('drag-over'); };
+          thumb.ondrop = (e) => {
+            e.preventDefault(); thumb.classList.remove('drag-over');
+            const draggedIdx = parseInt(e.dataTransfer.getData('text/plain'));
+            if (draggedIdx === index) return;
+            const itemToMove = state.mediaFiles.splice(draggedIdx, 1)[0];
+            state.mediaFiles.splice(index, 0, itemToMove);
+            renderStoryboard();
+          };
+
+          storyboardTrack.appendChild(thumb);
+        });
+      }
+
+      document.getElementById('uploadMedia').onchange = (e) => {
+        if (!e.target.files.length) return;
+        const newFiles = Array.from(e.target.files).map(f => ({
+          id: generateId(), url: URL.createObjectURL(f), type: f.type.startsWith('video') ? 'video' : 'image', caption: ''
+        }));
+        state.mediaFiles.push(...newFiles);
+        renderStoryboard();
+      };
+
+      document.getElementById('uploadAudio').onchange = (e) => {
+        if (!e.target.files.length) return;
+        state.bgmUrl = URL.createObjectURL(e.target.files[0]);
+        log('Trilha carregada.');
+      };
+
+      document.getElementById('btnGerarVoz').onclick = async () => {
+        const text = scriptArea.value.trim();
+        if (!text) return alert('Roteiro vazio.');
+        const btn = document.getElementById('btnGerarVoz');
+        const origText = btn.innerText;
+        btn.innerText = 'SINTETIZANDO...';
+        btn.disabled = true;
+
+        try {
+          const data = await geminiRequest({
+            contents: [{ parts: [{ text: 'Diga com tom de mistério e pausas dramáticas: ' + text.substring(0, 500) }] }],
+            generationConfig: {
+              responseModalities: ['AUDIO'],
+              speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Charon' } } }
+            }
+          }, 'gemini-2.5-flash-preview-tts:generateContent');
+
+          const base64 = data?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+          if (!base64) throw new Error('Resposta TTS sem áudio');
+
+          const binary = atob(base64);
+          const pcm = new Int16Array(binary.length / 2);
+          for (let i = 0; i < pcm.length; i++) pcm[i] = binary.charCodeAt(i * 2) | (binary.charCodeAt(i * 2 + 1) << 8);
+          state.voiceUrl = URL.createObjectURL(pcmToWav(pcm));
+          btn.innerText = 'VO GERADA COM SUCESSO';
+          setTimeout(() => btn.innerText = origText, 2200);
+          log('Voz sintetizada com sucesso.');
+        } catch (e) {
+          log(`Erro TTS: ${e.message}`, true);
+          btn.innerText = 'ERRO TTS';
+          setTimeout(() => btn.innerText = origText, 1800);
+        } finally {
+          btn.disabled = false;
+        }
+      };
+
+      function pcmToWav(pcmData) {
+        const b = new ArrayBuffer(44 + pcmData.length * 2), v = new DataView(b);
+        const s = (o, str) => { for (let i = 0; i < str.length; i++) v.setUint8(o + i, str.charCodeAt(i)); };
+        s(0, 'RIFF'); v.setUint32(4, 36 + pcmData.length * 2, true); s(8, 'WAVE'); s(12, 'fmt ');
+        v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+        v.setUint32(24, 24000, true); v.setUint32(28, 48000, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+        s(36, 'data'); v.setUint32(40, pcmData.length * 2, true);
+        pcmData.forEach((d, i) => v.setInt16(44 + i * 2, d, true));
+        return new Blob([b], { type: 'audio/wav' });
+      }
+
+      function renderFrame() {
+        if (!state.mediaFiles.length) return;
+
+        const mediaIndex = state.currentMediaIndex % state.mediaFiles.length;
+        const media = state.mediaFiles[mediaIndex];
+        const tone = document.getElementById('tonePreset').value;
+
+        if (state.isPlaying) renderStoryboard();
+
+        const frame = document.createElement('div');
+        frame.className = 'media-frame';
+
+        const el = document.createElement(media.type === 'video' ? 'video' : 'img');
+        el.src = media.url;
+        if (media.type === 'video') { el.autoplay = true; el.muted = true; el.loop = true; }
+        else { el.classList.add('ken-burns'); }
+
+        if (tone !== 'none') el.classList.add(`preset-${tone}`);
+        frame.appendChild(el);
+
+        if (media.caption && media.caption.trim() !== '') {
+          const caption = document.createElement('div');
+          caption.className = 'player-caption';
+          caption.innerText = media.caption;
+          frame.appendChild(caption);
+        }
+
+        playerContainer.appendChild(frame);
+
+        setTimeout(() => {
+          frame.classList.add('active');
+          const oldFrames = playerContainer.querySelectorAll('.media-frame:not(.active)');
+          oldFrames.forEach(f => { f.style.opacity = '0'; setTimeout(() => f.remove(), 1600); });
+        }, 50);
+      }
+
+      document.getElementById('btnPlay').onclick = () => {
+        if (state.isPlaying) {
+          state.isPlaying = false;
+          clearInterval(state.mediaInterval);
+          bgmAudio.pause();
+          voAudio.pause();
+          playerContainer.innerHTML = '<div id="placeholder">SINAL INTERROMPIDO</div>';
+          document.getElementById('btnPlay').innerText = '▶ INICIAR RENDERIZAÇÃO';
+          renderStoryboard();
+          log('Renderização interrompida.');
+          return;
+        }
+
+        if (!state.mediaFiles.length) return alert('Adicione mídias visuais no storyboard primeiro!');
+        state.isPlaying = true;
+        document.getElementById('btnPlay').innerText = '⏸ PAUSAR RENDERIZAÇÃO';
+        playerContainer.innerHTML = '';
+
+        if (state.bgmUrl) {
+          bgmAudio.src = state.bgmUrl;
+          bgmAudio.volume = Number(document.getElementById('volTrilha').value);
+          bgmAudio.play().catch(() => log('BGM bloqueada pelo navegador.', true));
+        }
+        if (state.voiceUrl) {
+          voAudio.src = state.voiceUrl;
+          voAudio.volume = Number(document.getElementById('volVoz').value);
+          voAudio.play().catch(() => log('Voz bloqueada pelo navegador.', true));
+        }
+
+        state.currentMediaIndex = 0;
+        renderFrame();
+        const pace = parseInt(document.getElementById('cutPace').value, 10);
+        state.mediaInterval = setInterval(() => { state.currentMediaIndex++; renderFrame(); }, pace);
+        log('Renderização iniciada.');
+      };
+
+      document.getElementById('btnExportProject').onclick = () => {
+        const payload = {
+          scriptTopic: document.getElementById('scriptTopic').value || '',
+          scriptContent: scriptArea.value || '',
+          captions: state.mediaFiles.map(({ id, type, caption }) => ({ id, type, caption: caption || '' })),
+          settings: {
+            tonePreset: document.getElementById('tonePreset').value,
+            cutPace: document.getElementById('cutPace').value,
+            volVoz: document.getElementById('volVoz').value,
+            volTrilha: document.getElementById('volTrilha').value
+          },
+          exportedAt: new Date().toISOString()
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `docgenia_project_${Date.now()}.json`;
+        a.click();
+        log('Projeto exportado (.json).');
+      };
+
+      renderStoryboard();
+      log('Sistema pronto. Carregue mídia e roteiro para começar.');
     </script>
-</body>
+  </body>
 </html>
