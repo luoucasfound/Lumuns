@@ -76,6 +76,14 @@
                             <option value="deep" selected>DEEP (2 PASSES)</option>
                         </select>
                     </div>
+                    <div>
+                        <label class="block text-[10px] text-gray-500 mb-1">MAX SCENES</label>
+                        <input id="max-scenes" type="number" min="2" max="30" value="12" class="w-full bg-black/50 border border-white/10 rounded p-2 text-xs">
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-gray-400">Save settings locally</span>
+                        <input type="checkbox" id="persist-settings" checked class="rounded bg-black">
+                    </div>
                 </div>
             </div>
         </div>
@@ -105,6 +113,7 @@
             <div class="glass p-4 rounded-xl max-h-48 overflow-y-auto font-mono text-[10px] text-gray-500 space-y-1" id="log-console">
                 <p>> System initialized. MP4 Container mode enabled.</p>
             </div>
+            <button id="clear-log-btn" class="w-full bg-white/5 hover:bg-white/10 text-gray-300 text-xs py-2 rounded-lg">CLEAR LOG</button>
         </div>
     </div>
 
@@ -125,6 +134,7 @@
         let mediaRecorder;
         let recordedChunks = [];
         let activeAudio = null;
+        let isPreviewMode = false;
 
         const startBtn = document.getElementById('start-btn');
         const previewBtn = document.getElementById('preview-btn');
@@ -138,6 +148,9 @@
         const geminiKeyInput = document.getElementById('gemini-key');
         const agentModeToggle = document.getElementById('agent-mode');
         const agentDepthSelect = document.getElementById('agent-depth');
+        const maxScenesInput = document.getElementById('max-scenes');
+        const persistSettingsToggle = document.getElementById('persist-settings');
+        const clearLogBtn = document.getElementById('clear-log-btn');
 
         function addLog(msg, type = 'info') {
             const p = document.createElement('p');
@@ -149,6 +162,52 @@
 
         function getApiKey() {
             return (geminiKeyInput.value || '').trim();
+        }
+
+        function getMaxScenes() {
+            const n = Number(maxScenesInput.value || 12);
+            return Math.min(30, Math.max(2, Number.isFinite(n) ? n : 12));
+        }
+
+        function splitScriptIntoScenes(rawScript) {
+            return rawScript
+                .split(/\n+|[.!?]+/)
+                .map(s => s.trim())
+                .filter(s => s.length > 12)
+                .slice(0, getMaxScenes())
+                .map(s => ({ text: s, prompt: s }));
+        }
+
+        function saveSettings() {
+            if (!persistSettingsToggle.checked) return;
+            localStorage.setItem('docugen_tts_provider', document.getElementById('tts-provider').value);
+            localStorage.setItem('docugen_mute_tts', document.getElementById('mute-tts').checked ? '1' : '0');
+            localStorage.setItem('docugen_ai_prompter', document.getElementById('ai-prompter').checked ? '1' : '0');
+            localStorage.setItem('docugen_agent_mode', agentModeToggle.checked ? '1' : '0');
+            localStorage.setItem('docugen_agent_depth', agentDepthSelect.value);
+            localStorage.setItem('docugen_max_scenes', String(getMaxScenes()));
+            localStorage.setItem('docugen_persist_settings', persistSettingsToggle.checked ? '1' : '0');
+            localStorage.setItem('docugen_gemini_key', geminiKeyInput.value || '');
+        }
+
+        function loadSettings() {
+            const persist = localStorage.getItem('docugen_persist_settings');
+            if (persist !== null) persistSettingsToggle.checked = persist === '1';
+            if (!persistSettingsToggle.checked) return;
+            const tts = localStorage.getItem('docugen_tts_provider');
+            const mute = localStorage.getItem('docugen_mute_tts');
+            const prompter = localStorage.getItem('docugen_ai_prompter');
+            const agentMode = localStorage.getItem('docugen_agent_mode');
+            const agentDepth = localStorage.getItem('docugen_agent_depth');
+            const maxScenes = localStorage.getItem('docugen_max_scenes');
+            const key = localStorage.getItem('docugen_gemini_key');
+            if (tts) document.getElementById('tts-provider').value = tts;
+            if (mute) document.getElementById('mute-tts').checked = mute === '1';
+            if (prompter) document.getElementById('ai-prompter').checked = prompter === '1';
+            if (agentMode) agentModeToggle.checked = agentMode === '1';
+            if (agentDepth) agentDepthSelect.value = agentDepth;
+            if (maxScenes) maxScenesInput.value = maxScenes;
+            if (key) geminiKeyInput.value = key;
         }
 
         async function callGemini(prompt, systemInstruction = "") {
@@ -327,10 +386,7 @@
         }
 
         async function buildScenesWithAgent(rawScript) {
-            const fallback = rawScript.split(/[.!?]+/).filter(s => s.trim().length > 5).map(s => ({
-                text: s.trim(),
-                prompt: s.trim()
-            }));
+            const fallback = splitScriptIntoScenes(rawScript);
 
             if (!getApiKey()) {
                 addLog('Agent Mode sem API key. Fallback local de cenas ativado.');
@@ -367,7 +423,7 @@
             }
 
             const normalized = planned
-                .slice(0, 16)
+                .slice(0, getMaxScenes())
                 .map(step => ({
                     text: (step.text || '').trim(),
                     prompt: (step.prompt || step.text || '').trim()
@@ -385,35 +441,40 @@
                 addLog(`Agent Mode ativo (${agentDepthSelect.value}). Construindo plano de cenas...`);
                 scriptSteps = await buildScenesWithAgent(rawScript);
             } else {
-                scriptSteps = rawScript.split(/[.!?]+/).filter(s => s.trim().length > 5).map(s => ({
-                    text: s.trim(),
-                    prompt: s.trim()
-                }));
+                scriptSteps = splitScriptIntoScenes(rawScript);
             }
 
             isProcessing = true;
+            isPreviewMode = previewOnly;
+            saveSettings();
             startBtn.disabled = previewBtn.disabled = true;
             stopBtn.disabled = false;
             progressOverlay.classList.remove('opacity-0', 'translate-y-4');
             document.getElementById('rec-indicator').classList.remove('hidden');
 
-            const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=h264')
-                ? 'video/webm;codecs=h264'
-                : 'video/webm;codecs=vp9';
+            if (!previewOnly) {
+                const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=h264')
+                    ? 'video/webm;codecs=h264'
+                    : 'video/webm;codecs=vp9';
 
-            const stream = canvas.captureStream(TARGET_FPS);
-            mediaRecorder = new MediaRecorder(stream, {
-                mimeType: mimeType,
-                videoBitsPerSecond: 5000000
-            });
+                const stream = canvas.captureStream(TARGET_FPS);
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: mimeType,
+                    videoBitsPerSecond: 5000000
+                });
 
-            recordedChunks = [];
-            mediaRecorder.ondataavailable = e => { if(e.data.size > 0) recordedChunks.push(e.data); };
-            mediaRecorder.start(100);
+                recordedChunks = [];
+                mediaRecorder.ondataavailable = e => { if(e.data.size > 0) recordedChunks.push(e.data); };
+                mediaRecorder.start(100);
+            } else {
+                mediaRecorder = null;
+                recordedChunks = [];
+                addLog('Preview mode: gravação desativada.');
+            }
 
             requestAnimationFrame(renderLoop);
 
-            const limit = previewOnly ? 2 : scriptSteps.length;
+            const limit = Math.min(previewOnly ? 2 : scriptSteps.length, getMaxScenes());
             const useAiPrompter = document.getElementById('ai-prompter').checked;
 
             for (let i = 0; i < limit; i++) {
@@ -464,6 +525,8 @@
                     }
                 });
             }
+            progressBar.style.width = '100%';
+            progressPercent.innerText = '100%';
             finishProcess();
         }
 
@@ -479,19 +542,35 @@
             }
             window.speechSynthesis.cancel();
 
+            if (isPreviewMode) {
+                addLog('Preview finalizado. Nenhum arquivo exportado.');
+                return;
+            }
+
             if (mediaRecorder && mediaRecorder.state !== 'inactive') {
                 mediaRecorder.onstop = () => {
                     const blob = new Blob(recordedChunks, { type: 'video/webm' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `DocuGen_Video_${Date.now()}.mp4`;
+                    a.download = `DocuGen_Video_${Date.now()}.webm`;
                     a.click();
-                    addLog("Vídeo exportado em container MP4 compatível.");
+                    addLog("Vídeo exportado com sucesso (.webm).");
                 };
                 mediaRecorder.stop();
             }
         }
+
+        clearLogBtn.onclick = () => {
+            logConsole.innerHTML = '<p>> Log limpo.</p>';
+        };
+
+        ['tts-provider', 'mute-tts', 'ai-prompter', 'agent-mode', 'agent-depth', 'max-scenes', 'persist-settings', 'gemini-key'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('change', saveSettings);
+        });
+
+        loadSettings();
 
         aiEnhanceBtn.onclick = enhanceScript;
         stopBtn.onclick = () => { isProcessing = false; finishProcess(); };
