@@ -214,7 +214,8 @@
 
         <div class="module">
           <h2>1. Roteirista IA</h2>
-          <input type="text" id="apiKeyInput" value="AIzaSyAFeKPuqNTf7PJyR0wlleKlhL314C1bEjU" placeholder="Gemini API Key (opcional)">
+          <input type="password" id="apiKeyInput" placeholder="Gemini API Key">
+          <button class="btn-ia" id="btnTestarKey" style="margin-top:6px;">Testar API Key</button>
           <input type="text" id="scriptTopic" class="input-tema" placeholder="Ex: O segredo da Atlântida...">
           <button class="btn-ia btn-magic" id="btnGerarRoteiro">✨ Escrever Roteiro</button>
           <textarea id="scriptContent" placeholder="O roteiro gerado ou editado manualmente aparecerá aqui..."></textarea>
@@ -293,6 +294,7 @@
       const storyboardTrack = document.getElementById('storyboardTrack');
       const logBox = document.getElementById('logBox');
       const apiKeyInput = document.getElementById('apiKeyInput');
+      const btnTestarKey = document.getElementById('btnTestarKey');
       let bgmAudio = new Audio();
       let voAudio = new Audio();
 
@@ -306,6 +308,33 @@
         if (isError) line.style.color = '#f87171';
         logBox.appendChild(line);
         logBox.scrollTop = logBox.scrollHeight;
+      }
+
+      async function testarApiKey() {
+        const key = getApiKey();
+        if (!key) {
+          log('Informe uma API key para testar.', true);
+          alert('Informe sua API key Gemini.');
+          return;
+        }
+
+        btnTestarKey.disabled = true;
+        const oldLabel = btnTestarKey.innerText;
+        btnTestarKey.innerText = 'TESTANDO...';
+
+        try {
+          await geminiRequest({
+            contents: [{ parts: [{ text: 'Responda apenas: OK' }] }]
+          }, 'gemini-2.5-flash-preview-09-2025:generateContent');
+          log('API key válida e funcional.');
+          alert('API key válida ✅');
+        } catch (error) {
+          log(`API key inválida ou sem permissão: ${error.message}`, true);
+          alert('API key inválida/sem permissão. Veja logs.');
+        } finally {
+          btnTestarKey.disabled = false;
+          btnTestarKey.innerText = oldLabel;
+        }
       }
 
       async function geminiRequest(payload, endpoint, extra = {}) {
@@ -582,6 +611,8 @@ Exemplo: ["Sinal Desconhecido", "Artefato Perdido", "A Verdade Oculta"]`;
         log('Renderização iniciada.');
       };
 
+      btnTestarKey.onclick = testarApiKey;
+
       document.getElementById('btnExportProject').onclick = () => {
         const payload = {
           scriptTopic: document.getElementById('scriptTopic').value || '',
@@ -605,7 +636,7 @@ Exemplo: ["Sinal Desconhecido", "Artefato Perdido", "A Verdade Oculta"]`;
       };
 
       renderStoryboard();
-      log('Sistema pronto. Carregue mídia e roteiro para começar.');
+      log('Sistema pronto. Insira uma API key Gemini e clique em Testar API Key.');
     </script>
   </body>
 </html>
