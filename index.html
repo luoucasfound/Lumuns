@@ -282,6 +282,8 @@
                 prompt: s.trim()
             }));
 
+            if (scriptSteps.length === 0) return addLog("Roteiro sem cenas válidas.", "error");
+
             isProcessing = true;
             startBtn.disabled = previewBtn.disabled = true;
             stopBtn.disabled = false;
@@ -304,58 +306,61 @@
 
             requestAnimationFrame(renderLoop);
 
-            const limit = previewOnly ? 2 : scriptSteps.length;
+            const limit = previewOnly ? Math.min(2, scriptSteps.length) : scriptSteps.length;
             const useAiPrompter = document.getElementById('ai-prompter').checked;
 
-            for (let i = 0; i < limit; i++) {
-                if (!isProcessing) break;
-                const step = scriptSteps[i];
-                progressStatus.innerText = `PROCESSANDO CENA ${i+1}/${limit}`;
-                progressBar.style.width = `${Math.round((i / limit) * 100)}%`;
-                progressPercent.innerText = `${Math.round((i / limit) * 100)}%`;
+            try {
+                for (let i = 0; i < limit; i++) {
+                    if (!isProcessing) break;
+                    const step = scriptSteps[i];
+                    progressStatus.innerText = `PROCESSANDO CENA ${i+1}/${limit}`;
+                    progressBar.style.width = `${Math.round((i / limit) * 100)}%`;
+                    progressPercent.innerText = `${Math.round((i / limit) * 100)}%`;
 
-                let visualPrompt = step.prompt;
-                if (useAiPrompter) {
-                    const aiPrompt = await callGemini(
-                        `Describe a cinematic image for: "${step.text}". Max 30 words.`,
-                        "Cinematographer assistant."
-                    );
-                    if (aiPrompt) visualPrompt = aiPrompt;
-                }
-
-                const imgUrl = await generateImage(visualPrompt);
-                const loader = new Promise(r => {
-                    currentImg.onload = r;
-                    currentImg.onerror = r;
-                    currentImg.src = imgUrl;
-                });
-                await loader;
-
-                currentText = step.text;
-                sceneStartAt = performance.now();
-                sceneDurationMs = Math.max(4000, step.text.length * 90);
-
-                await new Promise(async resolve => {
-                    if (document.getElementById('mute-tts').checked) {
-                        setTimeout(resolve, sceneDurationMs);
-                    } else {
-                        const provider = document.getElementById('tts-provider').value;
-                        let audioUrl = (provider === 'gemini') ? await geminiTTS(step.text) : null;
-                        if (audioUrl) {
-                            activeAudio = new Audio(audioUrl);
-                            activeAudio.onended = resolve;
-                            activeAudio.onerror = resolve;
-                            activeAudio.play().catch(resolve);
-                        } else {
-                            const utterance = new SpeechSynthesisUtterance(step.text);
-                            utterance.onend = resolve;
-                            utterance.onerror = resolve;
-                            window.speechSynthesis.speak(utterance);
-                        }
+                    let visualPrompt = step.prompt;
+                    if (useAiPrompter) {
+                        const aiPrompt = await callGemini(
+                            `Describe a cinematic image for: "${step.text}". Max 30 words.`,
+                            "Cinematographer assistant."
+                        );
+                        if (aiPrompt) visualPrompt = aiPrompt;
                     }
-                });
+
+                    const imgUrl = await generateImage(visualPrompt);
+                    const loader = new Promise(r => {
+                        currentImg.onload = r;
+                        currentImg.onerror = r;
+                        currentImg.src = imgUrl;
+                    });
+                    await loader;
+
+                    currentText = step.text;
+                    sceneStartAt = performance.now();
+                    sceneDurationMs = Math.max(4000, step.text.length * 90);
+
+                    await new Promise(async resolve => {
+                        if (document.getElementById('mute-tts').checked) {
+                            setTimeout(resolve, sceneDurationMs);
+                        } else {
+                            const provider = document.getElementById('tts-provider').value;
+                            let audioUrl = (provider === 'gemini') ? await geminiTTS(step.text) : null;
+                            if (audioUrl) {
+                                activeAudio = new Audio(audioUrl);
+                                activeAudio.onended = resolve;
+                                activeAudio.onerror = resolve;
+                                activeAudio.play().catch(resolve);
+                            } else {
+                                const utterance = new SpeechSynthesisUtterance(step.text);
+                                utterance.onend = resolve;
+                                utterance.onerror = resolve;
+                                window.speechSynthesis.speak(utterance);
+                            }
+                        }
+                    });
+                }
+            } finally {
+                finishProcess();
             }
-            finishProcess();
         }
 
         function finishProcess() {
