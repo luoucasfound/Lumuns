@@ -109,6 +109,7 @@
         let mediaRecorder;
         let recordedChunks = [];
         let activeAudio = null;
+        let isCleaningUp = false;
 
         const startBtn = document.getElementById('start-btn');
         const previewBtn = document.getElementById('preview-btn');
@@ -313,6 +314,8 @@
                 for (let i = 0; i < limit; i++) {
                     if (!isProcessing) break;
                     const step = scriptSteps[i];
+                    if (!step) throw new Error(`Cena inválida no índice ${i}`);
+
                     progressStatus.innerText = `PROCESSANDO CENA ${i+1}/${limit}`;
                     progressBar.style.width = `${Math.round((i / limit) * 100)}%`;
                     progressPercent.innerText = `${Math.round((i / limit) * 100)}%`;
@@ -358,12 +361,19 @@
                         }
                     });
                 }
+                progressStatus.innerText = `PROCESSAMENTO CONCLUÍDO (${limit}/${limit})`;
+                progressBar.style.width = '100%';
+                progressPercent.innerText = '100%';
+            } catch (error) {
+                addLog(`Falha no processamento: ${error?.message || error}`, 'error');
             } finally {
                 finishProcess();
             }
         }
 
         function finishProcess() {
+            if (isCleaningUp) return;
+            isCleaningUp = true;
             isProcessing = false;
             startBtn.disabled = previewBtn.disabled = false;
             stopBtn.disabled = true;
@@ -381,11 +391,14 @@
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `DocuGen_Video_${Date.now()}.mp4`;
+                    a.download = `DocuGen_Video_${Date.now()}.webm`;
                     a.click();
-                    addLog("Vídeo exportado em container MP4 compatível.");
+                    addLog("Vídeo exportado em WEBM.");
+                    isCleaningUp = false;
                 };
                 mediaRecorder.stop();
+            } else {
+                isCleaningUp = false;
             }
         }
 
