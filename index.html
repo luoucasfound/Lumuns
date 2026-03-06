@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DocGenIA - Studio AI Edition</title>
+    <style>
+      :root {
+        --bg-main: #02020a;
+        --bg-panel: #0d0d1a;
+        --border: #334155;
+        --text: #f1f5f9;
+        --accent: #eab308;
+        --highlight: #38bdf8;
+        --danger: #ef4444;
+        --ai-glow: #a855f7;
+      }
+
+      * { box-sizing: border-box; font-family: 'Georgia', serif; }
+
+      body {
+        margin: 0;
+        background-color: var(--bg-main);
+        color: var(--text);
+        height: 100vh;
+        display: flex;
+        overflow: hidden;
+      }
+
+      .dashboard {
+        display: grid;
+        grid-template-columns: 380px 1fr;
+        grid-template-rows: 1fr auto;
+        width: 100%;
+        height: 100%;
+        gap: 1rem;
+        padding: 1rem;
+      }
+
+      .sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        overflow-y: auto;
+        padding-right: 0.5rem;
+        grid-row: 1 / -1;
+      }
+
+      .sidebar::-webkit-scrollbar { width: 6px; }
+      .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+      .module {
+        background: var(--bg-panel);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 1rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      }
+
+      h2 { margin: 0 0 0.5rem 0; font-size: 0.75rem; text-transform: uppercase; color: var(--accent); letter-spacing: 2px;}
+      
+      .brand {
+        color: var(--accent);
+        font-size: 1.5rem;
+        font-weight: 900;
+        margin-bottom: 0.5rem;
+        text-shadow: 0 0 10px rgba(234, 179, 8, 0.4);
+        text-align: center;
+      }
+      
+      .brand-sub {
+        text-align: center; font-size: 0.65rem; color: var(--highlight); letter-spacing: 3px; margin-bottom: 1rem;
+      }
+
+      .file-drop {
+        border: 1px dashed var(--border);
+        padding: 1rem;
+        text-align: center;
+        background: rgba(255,255,255,0.03);
+        cursor: pointer;
+        transition: 0.2s;
+        font-size: 0.75rem;
+        display: block;
+      }
+      .file-drop:hover { border-color: var(--accent); background: rgba(234, 179, 8, 0.05); }
+      input[type="file"] { display: none; }
+
+      select, button, textarea, input[type="text"], input[type="password"] {
+        width: 100%;
+        padding: 0.6rem;
+        margin-top: 0.5rem;
+        background: #000;
+        border: 1px solid var(--border);
+        color: white;
+        border-radius: 2px;
+        font-size: 0.85rem;
+      }
+
+      textarea { height: 90px; resize: none; border-left: 3px solid var(--accent); }
+      .input-tema { border-left: 3px solid var(--ai-glow); margin-bottom: 5px; }
+
+      .btn-ia {
+        background: #1e293b;
+        color: var(--accent); border: 1px solid var(--accent);
+        text-transform: uppercase; font-size: 0.7rem; letter-spacing: 1px;
+        cursor: pointer; transition: 0.2s;
+      }
+      .btn-ia:hover:not(:disabled) { background: var(--accent); color: #000; }
+      
+      .btn-magic {
+        border-color: var(--ai-glow); color: #d8b4fe; background: rgba(168, 85, 247, 0.1);
+      }
+      .btn-magic:hover:not(:disabled) { background: var(--ai-glow); color: #fff; box-shadow: 0 0 10px var(--ai-glow); }
+      .btn-magic:disabled { opacity: 0.5; cursor: not-allowed; }
+
+      button.play-btn {
+        background: var(--accent); color: #000; font-weight: 900;
+        padding: 1rem; font-size: 1rem; margin-top: 1rem;
+        border: none; cursor: pointer; transition: 0.2s;
+      }
+      button.play-btn:hover { background: #fde047; box-shadow: 0 0 15px rgba(234, 179, 8, 0.4); }
+
+      .log-box {
+        max-height: 120px;
+        overflow-y: auto;
+        background: rgba(0,0,0,0.35);
+        border: 1px solid #1e293b;
+        padding: 8px;
+        font-family: monospace;
+        font-size: 0.65rem;
+        color: #94a3b8;
+        margin-top: 8px;
+      }
+
+      .main-stage { display: flex; flex-direction: column; position: relative; min-height: 0; }
+
+      .player-container {
+        background: #000; flex-grow: 1; border: 1px solid var(--border);
+        position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;
+      }
+
+      .player-container::after {
+        content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: url('https://www.transparenttextures.com/patterns/stardust.png');
+        opacity: 0.15; pointer-events: none; z-index: 10;
+      }
+
+      .media-frame {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        display: flex; align-items: center; justify-content: center;
+        opacity: 0; transition: opacity 1.5s ease-in-out;
+      }
+      .media-frame.active { opacity: 1; }
+      .media-frame img, .media-frame video { min-width: 100%; min-height: 100%; object-fit: cover; }
+
+      .ken-burns { animation: kenburns 20s infinite alternate ease-in-out; }
+      @keyframes kenburns { 0% { transform: scale(1) translate(0, 0); } 100% { transform: scale(1.2) translate(-2%, -2%); } }
+
+      .preset-cinematic { filter: contrast(1.1) saturate(0.7) sepia(0.1) brightness(0.9); }
+      .preset-vintage { filter: sepia(0.6) contrast(1.1) grayscale(0.2); }
+
+      .player-caption {
+        position: absolute; bottom: 10%; width: 80%; text-align: center;
+        color: #fff; font-family: 'Arial', sans-serif; font-size: 1.8rem; text-transform: uppercase; letter-spacing: 2px;
+        text-shadow: 2px 2px 5px rgba(0,0,0,0.9), -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+        z-index: 20;
+      }
+
+      .storyboard-module {
+        background: var(--bg-panel); border: 1px solid var(--border); padding: 1rem;
+        display: flex; flex-direction: column; gap: 0.5rem; min-height: 180px;
+      }
+
+      .storyboard-header { display: flex; justify-content: space-between; align-items: center; }
+
+      .storyboard-track {
+        display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px; flex-grow: 1; align-items: center;
+      }
+
+      .thumb-item {
+        width: 140px; height: 100px; background: #000; position: relative;
+        cursor: grab; border: 2px solid #334155; border-radius: 4px; flex-shrink: 0; transition: transform 0.2s;
+      }
+      .thumb-item:active { cursor: grabbing; }
+      .thumb-item.drag-over { border-color: var(--highlight); transform: scale(1.05); }
+      .thumb-item.playing { border-color: var(--accent); box-shadow: 0 0 15px rgba(234, 179, 8, 0.5); }
+      
+      .thumb-item img, .thumb-item video { width: 100%; height: 100%; object-fit: cover; border-radius: 2px; }
+      
+      .caption-input {
+        position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.8); border: none; color: white;
+        font-size: 0.7rem; padding: 4px; text-align: center; font-family: sans-serif; margin-top: 0;
+      }
+
+      .btn-delete {
+        position: absolute; top: -5px; right: -5px; background: var(--danger); color: white; border: none;
+        border-radius: 50%; width: 22px; height: 22px; font-size: 10px; cursor: pointer; display: none; font-weight: bold; z-index: 5;
+      }
+      .thumb-item:hover .btn-delete { display: block; }
+      
+      .storyboard-track::-webkit-scrollbar { height: 8px; }
+      .storyboard-track::-webkit-scrollbar-track { background: #020617; }
+      .storyboard-track::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
+    </style>
+  </head>
+  <body>
+    <div class="dashboard">
+      <div class="sidebar">
+        <div>
+          <div class="brand">DOCGENIA</div>
+          <div class="brand-sub">STUDIO AI POWERED</div>
+        </div>
+
+        <div class="module">
+          <h2>1. Roteirista IA</h2>
+          <input type="password" id="apiKeyInput" placeholder="Gemini API Key">
+          <button class="btn-ia" id="btnTestarKey" style="margin-top:6px;">Testar API Key</button>
+          <input type="text" id="scriptTopic" class="input-tema" placeholder="Ex: O segredo da Atlântida...">
+          <button class="btn-ia btn-magic" id="btnGerarRoteiro">✨ Escrever Roteiro</button>
+          <textarea id="scriptContent" placeholder="O roteiro gerado ou editado manualmente aparecerá aqui..."></textarea>
+          <button class="btn-ia" id="btnGerarVoz" style="margin-top: 5px;">Gerar Voz (TTS)</button>
+          <div class="log-box" id="logBox"></div>
+        </div>
+
+        <div class="module">
+          <h2>2. Evidências Visuais</h2>
+          <label class="file-drop">
+            + Adicionar Fotos/Vídeos
+            <input type="file" id="uploadMedia" accept="image/*,video/*" multiple>
+          </label>
+        </div>
+
+        <div class="module">
+          <h2>3. Áudio & Mixagem</h2>
+          <label class="file-drop">
+            + Adicionar Trilha (BGM)
+            <input type="file" id="uploadAudio" accept="audio/*">
+          </label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+            <label style="font-size: 0.6rem;">VOZ <input type="range" id="volVoz" min="0" max="1" step="0.1" value="1"></label>
+            <label style="font-size: 0.6rem;">BGM <input type="range" id="volTrilha" min="0" max="1" step="0.1" value="0.4"></label>
+          </div>
+        </div>
+
+        <div class="module">
+          <h2>4. Exportação</h2>
+          <select id="tonePreset">
+            <option value="cinematic">Filtro: Documentário Moderno</option>
+            <option value="vintage">Filtro: Arquivo Perdido</option>
+            <option value="none">Filtro: Cru</option>
+          </select>
+          <select id="cutPace">
+            <option value="5000" selected>Duração do Clip: 5s</option>
+            <option value="8000">Duração do Clip: 8s</option>
+          </select>
+          <button class="btn-ia" id="btnExportProject">Exportar Projeto (.json)</button>
+          <button class="play-btn" id="btnPlay">▶ INICIAR RENDERIZAÇÃO</button>
+        </div>
+      </div>
+
+      <div class="main-stage">
+        <div class="player-container" id="playerContainer">
+          <div id="placeholder" style="color:#222; font-size: 1.2rem; letter-spacing: 5px; font-weight: bold;">SISTEMA PRONTO</div>
+        </div>
+      </div>
+
+      <div class="storyboard-module">
+        <div class="storyboard-header">
+          <h2>Storyboard (Arraste para Reordenar)</h2>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <span id="mediaCount" style="font-size: 0.7rem; color: #64748b;">0 clipes</span>
+            <button class="btn-ia btn-magic" id="btnGerarLegendas" style="margin: 0; padding: 4px 8px; width: auto;">✨ Auto-Legendas IA</button>
+          </div>
+        </div>
+        <div class="storyboard-track" id="storyboardTrack">
+          <div style="color: #334155; font-size: 0.8rem; margin: auto;">Adicione mídias na barra lateral para começar...</div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const state = {
+        mediaFiles: [],
+        bgmUrl: null,
+        voiceUrl: null,
+        isPlaying: false,
+        mediaInterval: null,
+        currentMediaIndex: 0
+      };
+
+      const scriptArea = document.getElementById('scriptContent');
+      const playerContainer = document.getElementById('playerContainer');
+      const storyboardTrack = document.getElementById('storyboardTrack');
+      const logBox = document.getElementById('logBox');
+      const apiKeyInput = document.getElementById('apiKeyInput');
+      const btnTestarKey = document.getElementById('btnTestarKey');
+      let bgmAudio = new Audio();
+      let voAudio = new Audio();
+
+      function getApiKey() {
+        return (apiKeyInput.value || '').trim();
+      }
+
+      function log(msg, isError = false) {
+        const line = document.createElement('div');
+        line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        if (isError) line.style.color = '#f87171';
+        logBox.appendChild(line);
+        logBox.scrollTop = logBox.scrollHeight;
+      }
+
+      async function testarApiKey() {
+        const key = getApiKey();
+        if (!key) {
+          log('Informe uma API key para testar.', true);
+          alert('Informe sua API key Gemini.');
+          return;
+        }
+
+        btnTestarKey.disabled = true;
+        const oldLabel = btnTestarKey.innerText;
+        btnTestarKey.innerText = 'TESTANDO...';
+
+        try {
+          await geminiRequest({
+            contents: [{ parts: [{ text: 'Responda apenas: OK' }] }]
+          }, 'gemini-2.5-flash-preview-09-2025:generateContent');
+          log('API key válida e funcional.');
+          alert('API key válida ✅');
+        } catch (error) {
+          log(`API key inválida ou sem permissão: ${error.message}`, true);
+          alert('API key inválida/sem permissão. Veja logs.');
+        } finally {
+          btnTestarKey.disabled = false;
+          btnTestarKey.innerText = oldLabel;
+        }
+      }
+
+      async function geminiRequest(payload, endpoint, extra = {}) {
+        const key = getApiKey();
+        if (!key) throw new Error('API key ausente');
+        const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${endpoint}?key=${key}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(extra.headers || {}) },
+          body: JSON.stringify(payload)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+          const reason = data?.error?.message || `HTTP ${resp.status}`;
+          throw new Error(reason);
+        }
+        return data;
+      }
+
+      function safeJsonParse(input) {
+        if (!input) return null;
+        const cleaned = input.replace(/```json|```/g, '').trim();
+        try { return JSON.parse(cleaned); } catch { return null; }
+      }
+
+      document.getElementById('btnGerarRoteiro').onclick = async () => {
+        const topic = document.getElementById('scriptTopic').value.trim();
+        if (!topic) return alert('Por favor, insira um tema primeiro.');
+
+        const btn = document.getElementById('btnGerarRoteiro');
+        const originalText = btn.innerText;
+        btn.innerText = '✨ ESCREVENDO...';
+        btn.disabled = true;
+
+        const prompt = `Aja como um produtor/narrador do History Channel (estilo Alienígenas do Passado). Escreva um roteiro dramático e misterioso sobre o seguinte tema: "${topic}". Use perguntas retóricas (ex: "E se...?", "Poderia ser que...?"). Máximo de 3 parágrafos curtos. Não inclua introduções como "Aqui está o roteiro", apenas o texto puro da narração.`;
+
+        try {
+          const data = await geminiRequest({ contents: [{ parts: [{ text: prompt }] }] }, 'gemini-2.5-flash-preview-09-2025:generateContent');
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) scriptArea.value = text.trim();
+          log('Roteiro IA gerado com sucesso.');
+        } catch (error) {
+          log(`Erro ao gerar roteiro: ${error.message}`, true);
+          alert('Erro ao conectar com Gemini IA. Verifique API key.');
+        } finally {
+          btn.innerText = originalText;
+          btn.disabled = false;
+        }
+      };
+
+      document.getElementById('btnGerarLegendas').onclick = async () => {
+        if (state.mediaFiles.length === 0) return alert('Adicione evidências visuais (clipes) primeiro.');
+
+        const currentScript = scriptArea.value.trim() || 'Mistérios não resolvidos da humanidade e anomalias históricas.';
+        const count = state.mediaFiles.length;
+
+        const btn = document.getElementById('btnGerarLegendas');
+        const originalText = btn.innerText;
+        btn.innerText = '✨ GERANDO...';
+        btn.disabled = true;
+
+        const prompt = `Baseado no seguinte roteiro de documentário: "${currentScript}".
+Preciso de legendas curtas para ${count} cenas de vídeo.
+As legendas devem ser frases de impacto de mistério/teoria da conspiração (MÁXIMO 4 palavras cada).
+Retorne estritamente um Array JSON válido com ${count} strings.
+Exemplo: ["Sinal Desconhecido", "Artefato Perdido", "A Verdade Oculta"]`;
+
+        try {
+          const data = await geminiRequest({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: 'application/json' }
+          }, 'gemini-2.5-flash-preview-09-2025:generateContent');
+
+          const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          const captionsArray = safeJsonParse(jsonText);
+
+          if (!Array.isArray(captionsArray)) throw new Error('JSON de legendas inválido');
+
+          state.mediaFiles.forEach((media, index) => {
+            if (captionsArray[index]) media.caption = String(captionsArray[index]);
+          });
+          renderStoryboard();
+          log('Legendas geradas e aplicadas.');
+        } catch (error) {
+          log(`Erro ao gerar legendas: ${error.message}`, true);
+          alert('Erro ao gerar legendas com IA.');
+        } finally {
+          btn.innerText = originalText;
+          btn.disabled = false;
+        }
+      };
+
+      function generateId() { return 'clip_' + Math.random().toString(36).substr(2, 9); }
+
+      function renderStoryboard() {
+        document.getElementById('mediaCount').innerText = `${state.mediaFiles.length} clipes`;
+        if (state.mediaFiles.length === 0) {
+          storyboardTrack.innerHTML = '<div style="color: #334155; font-size: 0.8rem; margin: auto;">Adicione mídias na barra lateral para começar...</div>';
+          return;
+        }
+
+        storyboardTrack.innerHTML = '';
+        state.mediaFiles.forEach((media, index) => {
+          const thumb = document.createElement('div');
+          thumb.className = `thumb-item ${state.isPlaying && (state.currentMediaIndex % state.mediaFiles.length === index) ? 'playing' : ''}`;
+          thumb.draggable = true;
+          thumb.dataset.index = index;
+
+          const el = document.createElement(media.type === 'video' ? 'video' : 'img');
+          el.src = media.url;
+          thumb.appendChild(el);
+
+          const delBtn = document.createElement('button');
+          delBtn.className = 'btn-delete';
+          delBtn.innerText = 'X';
+          delBtn.onclick = () => { state.mediaFiles.splice(index, 1); renderStoryboard(); };
+          thumb.appendChild(delBtn);
+
+          const capInput = document.createElement('input');
+          capInput.className = 'caption-input';
+          capInput.type = 'text';
+          capInput.placeholder = 'Legenda...';
+          capInput.value = media.caption || '';
+          capInput.oninput = (e) => { state.mediaFiles[index].caption = e.target.value; };
+          thumb.appendChild(capInput);
+
+          thumb.ondragstart = (e) => { e.dataTransfer.setData('text/plain', index); setTimeout(() => thumb.style.opacity = '0.4', 0); };
+          thumb.ondragend = () => { thumb.style.opacity = '1'; };
+          thumb.ondragover = (e) => { e.preventDefault(); thumb.classList.add('drag-over'); };
+          thumb.ondragleave = () => { thumb.classList.remove('drag-over'); };
+          thumb.ondrop = (e) => {
+            e.preventDefault(); thumb.classList.remove('drag-over');
+            const draggedIdx = parseInt(e.dataTransfer.getData('text/plain'));
+            if (draggedIdx === index) return;
+            const itemToMove = state.mediaFiles.splice(draggedIdx, 1)[0];
+            state.mediaFiles.splice(index, 0, itemToMove);
+            renderStoryboard();
+          };
+
+          storyboardTrack.appendChild(thumb);
+        });
+      }
+
+      document.getElementById('uploadMedia').onchange = (e) => {
+        if (!e.target.files.length) return;
+        const newFiles = Array.from(e.target.files).map(f => ({
+          id: generateId(), url: URL.createObjectURL(f), type: f.type.startsWith('video') ? 'video' : 'image', caption: ''
+        }));
+        state.mediaFiles.push(...newFiles);
+        renderStoryboard();
+      };
+
+      document.getElementById('uploadAudio').onchange = (e) => {
+        if (!e.target.files.length) return;
+        state.bgmUrl = URL.createObjectURL(e.target.files[0]);
+        log('Trilha carregada.');
+      };
+
+      document.getElementById('btnGerarVoz').onclick = async () => {
+        const text = scriptArea.value.trim();
+        if (!text) return alert('Roteiro vazio.');
+        const btn = document.getElementById('btnGerarVoz');
+        const origText = btn.innerText;
+        btn.innerText = 'SINTETIZANDO...';
+        btn.disabled = true;
+
+        try {
+          const data = await geminiRequest({
+            contents: [{ parts: [{ text: 'Diga com tom de mistério e pausas dramáticas: ' + text.substring(0, 500) }] }],
+            generationConfig: {
+              responseModalities: ['AUDIO'],
+              speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Charon' } } }
+            }
+          }, 'gemini-2.5-flash-preview-tts:generateContent');
+
+          const base64 = data?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+          if (!base64) throw new Error('Resposta TTS sem áudio');
+
+          const binary = atob(base64);
+          const pcm = new Int16Array(binary.length / 2);
+          for (let i = 0; i < pcm.length; i++) pcm[i] = binary.charCodeAt(i * 2) | (binary.charCodeAt(i * 2 + 1) << 8);
+          state.voiceUrl = URL.createObjectURL(pcmToWav(pcm));
+          btn.innerText = 'VO GERADA COM SUCESSO';
+          setTimeout(() => btn.innerText = origText, 2200);
+          log('Voz sintetizada com sucesso.');
+        } catch (e) {
+          log(`Erro TTS: ${e.message}`, true);
+          btn.innerText = 'ERRO TTS';
+          setTimeout(() => btn.innerText = origText, 1800);
+        } finally {
+          btn.disabled = false;
+        }
+      };
+
+      function pcmToWav(pcmData) {
+        const b = new ArrayBuffer(44 + pcmData.length * 2), v = new DataView(b);
+        const s = (o, str) => { for (let i = 0; i < str.length; i++) v.setUint8(o + i, str.charCodeAt(i)); };
+        s(0, 'RIFF'); v.setUint32(4, 36 + pcmData.length * 2, true); s(8, 'WAVE'); s(12, 'fmt ');
+        v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+        v.setUint32(24, 24000, true); v.setUint32(28, 48000, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+        s(36, 'data'); v.setUint32(40, pcmData.length * 2, true);
+        pcmData.forEach((d, i) => v.setInt16(44 + i * 2, d, true));
+        return new Blob([b], { type: 'audio/wav' });
+      }
+
+      function renderFrame() {
+        if (!state.mediaFiles.length) return;
+
+        const mediaIndex = state.currentMediaIndex % state.mediaFiles.length;
+        const media = state.mediaFiles[mediaIndex];
+        const tone = document.getElementById('tonePreset').value;
+
+        if (state.isPlaying) renderStoryboard();
+
+        const frame = document.createElement('div');
+        frame.className = 'media-frame';
+
+        const el = document.createElement(media.type === 'video' ? 'video' : 'img');
+        el.src = media.url;
+        if (media.type === 'video') { el.autoplay = true; el.muted = true; el.loop = true; }
+        else { el.classList.add('ken-burns'); }
+
+        if (tone !== 'none') el.classList.add(`preset-${tone}`);
+        frame.appendChild(el);
+
+        if (media.caption && media.caption.trim() !== '') {
+          const caption = document.createElement('div');
+          caption.className = 'player-caption';
+          caption.innerText = media.caption;
+          frame.appendChild(caption);
+        }
+
+        playerContainer.appendChild(frame);
+
+        setTimeout(() => {
+          frame.classList.add('active');
+          const oldFrames = playerContainer.querySelectorAll('.media-frame:not(.active)');
+          oldFrames.forEach(f => { f.style.opacity = '0'; setTimeout(() => f.remove(), 1600); });
+        }, 50);
+      }
+
+      document.getElementById('btnPlay').onclick = () => {
+        if (state.isPlaying) {
+          state.isPlaying = false;
+          clearInterval(state.mediaInterval);
+          bgmAudio.pause();
+          voAudio.pause();
+          playerContainer.innerHTML = '<div id="placeholder">SINAL INTERROMPIDO</div>';
+          document.getElementById('btnPlay').innerText = '▶ INICIAR RENDERIZAÇÃO';
+          renderStoryboard();
+          log('Renderização interrompida.');
+          return;
+        }
+
+        if (!state.mediaFiles.length) return alert('Adicione mídias visuais no storyboard primeiro!');
+        state.isPlaying = true;
+        document.getElementById('btnPlay').innerText = '⏸ PAUSAR RENDERIZAÇÃO';
+        playerContainer.innerHTML = '';
+
+        if (state.bgmUrl) {
+          bgmAudio.src = state.bgmUrl;
+          bgmAudio.volume = Number(document.getElementById('volTrilha').value);
+          bgmAudio.play().catch(() => log('BGM bloqueada pelo navegador.', true));
+        }
+        if (state.voiceUrl) {
+          voAudio.src = state.voiceUrl;
+          voAudio.volume = Number(document.getElementById('volVoz').value);
+          voAudio.play().catch(() => log('Voz bloqueada pelo navegador.', true));
+        }
+
+        state.currentMediaIndex = 0;
+        renderFrame();
+        const pace = parseInt(document.getElementById('cutPace').value, 10);
+        state.mediaInterval = setInterval(() => { state.currentMediaIndex++; renderFrame(); }, pace);
+        log('Renderização iniciada.');
+      };
+
+      btnTestarKey.onclick = testarApiKey;
+
+      document.getElementById('btnExportProject').onclick = () => {
+        const payload = {
+          scriptTopic: document.getElementById('scriptTopic').value || '',
+          scriptContent: scriptArea.value || '',
+          captions: state.mediaFiles.map(({ id, type, caption }) => ({ id, type, caption: caption || '' })),
+          settings: {
+            tonePreset: document.getElementById('tonePreset').value,
+            cutPace: document.getElementById('cutPace').value,
+            volVoz: document.getElementById('volVoz').value,
+            volTrilha: document.getElementById('volTrilha').value
+          },
+          exportedAt: new Date().toISOString()
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `docgenia_project_${Date.now()}.json`;
+        a.click();
+        log('Projeto exportado (.json).');
+      };
+
+      renderStoryboard();
+      log('Sistema pronto. Insira uma API key Gemini e clique em Testar API Key.');
+    </script>
+  </body>
+</html>
