@@ -3,23 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Conexão Delta — Agente de Ofertas Shopee</title>
+    <title>Conexão Delta — Agente Gestor de Conteúdo</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <header>
-      <h1>Agente de Automação — Shopee Afiliados</h1>
+      <h1>Agente Gestor — Shopee Afiliados (TikTok + Instagram)</h1>
       <p>
-        Gere posts, legendas, hashtags e cronograma em lote para o seu Instagram de ofertas.
+        Um único painel para criar vídeos, gerar copys e gerenciar a fila de postagens.
       </p>
     </header>
 
     <main>
       <section class="panel">
-        <h2>1) Configuração do canal</h2>
+        <h2>1) Estratégia do canal</h2>
         <div class="grid">
           <label>
-            Nome do perfil
+            Perfil
             <input id="channelName" value="@conexaodelta3" />
           </label>
           <label>
@@ -32,11 +32,19 @@
             </select>
           </label>
           <label>
-            Tom da comunicação
+            Tom
             <select id="tone">
               <option selected>Urgência + economia</option>
               <option>Informativo</option>
               <option>Divertido</option>
+            </select>
+          </label>
+          <label>
+            Plataforma prioritária
+            <select id="platform">
+              <option selected>Instagram Reels</option>
+              <option>TikTok</option>
+              <option>Ambas</option>
             </select>
           </label>
         </div>
@@ -53,21 +61,30 @@ Kit 3 Camisetas Dry Fit | 99,90 | 59,90 | https://s.shopee.com.br/exemplo3</text
       </section>
 
       <section class="panel">
-        <h2>3) Automação de conteúdo</h2>
+        <h2>3) Agente de criação</h2>
         <div class="actions">
-          <button id="generatePosts">Gerar 3 posts prontos</button>
-          <button id="generateStories">Gerar sequência de Stories</button>
-          <button id="buildSchedule">Montar cronograma semanal</button>
+          <button id="generateVideoPlan">Criar roteiro de vídeo curto</button>
+          <button id="generatePosts">Gerar copys de posts</button>
+          <button id="addQueue">Adicionar itens na fila</button>
         </div>
         <pre id="output" aria-live="polite">Aguardando ação...</pre>
       </section>
 
       <section class="panel">
-        <h2>4) Observações importantes</h2>
+        <h2>4) Agente de gestão das postagens</h2>
+        <div class="actions">
+          <button id="buildSchedule">Montar agenda semanal</button>
+          <button id="advanceQueue">Avançar próximo item (simulação)</button>
+        </div>
+        <ul id="queueList"></ul>
+      </section>
+
+      <section class="panel">
+        <h2>5) Observações</h2>
         <ul>
-          <li>Publique sempre com identificação de afiliado (#publi ou equivalente).</li>
-          <li>Respeite as políticas da Shopee e do Instagram para automações e spam.</li>
-          <li>Use este agente para gerar texto e planejamento; a postagem final pode ser revisada por você.</li>
+          <li>O protótipo simula um agente gestor: gera conteúdo e organiza execução.</li>
+          <li>Você ainda revisa antes de publicar para manter qualidade e compliance.</li>
+          <li>Sempre sinalize conteúdo de afiliado (#publi) e siga políticas das plataformas.</li>
         </ul>
       </section>
     </main>

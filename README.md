@@ -1,6 +1,6 @@
 # Lumuns
 
-Protótipo de um agente para automatizar a criação de conteúdo de ofertas para canais de afiliados da Shopee.
+Protótipo de um agente gestor para canais de afiliados da Shopee, focado em TikTok e Instagram.
 
 ## Protótipo (UI)
 1. Execute um servidor local dentro da pasta do projeto:
@@ -9,11 +9,12 @@ Protótipo de um agente para automatizar a criação de conteúdo de ofertas par
    - `http://localhost:4173/prototype/`
 
 ## O que o protótipo faz
-- Configura o perfil e nicho do canal.
-- Lê uma lista de produtos em lote.
+- Configura perfil, nicho, tom e plataforma prioritária.
+- Lê produtos em lote com preço antigo, novo e link afiliado.
+- Gera roteiro de vídeo curto para Reels/TikTok (hook, cenas e CTA).
 - Gera copys prontas para posts.
-- Gera sequência de Stories.
-- Monta cronograma semanal de publicações.
+- Gerencia fila de postagens com status (produção, agendado, publicado).
+- Monta agenda semanal com checklist diário operacional.
 
 ## Observação
-O protótipo não publica automaticamente no Instagram nem integra API da Shopee; ele acelera o planejamento e a geração de textos para publicação manual com revisão.
+O protótipo ainda é uma simulação de agente: ajuda a criar e gerenciar conteúdo, mas não publica automaticamente nem integra APIs externas.

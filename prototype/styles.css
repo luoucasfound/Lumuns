@@ -2,7 +2,7 @@
   color-scheme: dark;
   --bg: #0d1118;
   --panel: #141b29;
-  --line: #29364d;
+  --line: #2d3a52;
   --text: #e6ecf7;
   --accent: #ff7a18;
 }
@@ -14,13 +14,13 @@
 
 body {
   margin: 0;
-  background: radial-gradient(circle at top, #1a2438 0%, var(--bg) 44%);
+  background: radial-gradient(circle at top, #1b253a 0%, var(--bg) 46%);
   color: var(--text);
 }
 
 header,
 main {
-  width: min(980px, 92vw);
+  width: min(1020px, 92vw);
   margin: 0 auto;
 }
 
@@ -87,13 +87,18 @@ button {
 }
 
 pre {
-  min-height: 220px;
+  min-height: 250px;
   white-space: pre-wrap;
 }
 
 ul {
   margin: 0;
   padding-left: 1.2rem;
+}
+
+#queueList li {
+  margin-bottom: 0.45rem;
+  line-height: 1.35;
 }
 
 .hint {
