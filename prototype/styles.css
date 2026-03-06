@@ -1,10 +1,10 @@
 :root {
   color-scheme: dark;
-  --bg: #0f1218;
-  --panel: #161b24;
-  --line: #2a3446;
-  --text: #e8edf7;
-  --accent: #d8a24d;
+  --bg: #0d1118;
+  --panel: #141b29;
+  --line: #29364d;
+  --text: #e6ecf7;
+  --accent: #ff7a18;
 }
 
 * {
@@ -14,7 +14,7 @@
 
 body {
   margin: 0;
-  background: radial-gradient(circle at top, #1d2637 0%, var(--bg) 45%);
+  background: radial-gradient(circle at top, #1a2438 0%, var(--bg) 44%);
   color: var(--text);
 }
 
@@ -34,7 +34,7 @@ h2 {
 }
 
 .panel {
-  background: color-mix(in oklab, var(--panel), black 5%);
+  background: color-mix(in oklab, var(--panel), black 4%);
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 1rem;
@@ -57,18 +57,25 @@ label {
 input,
 select,
 button,
-pre {
+pre,
+textarea {
   border-radius: 10px;
   border: 1px solid var(--line);
-  background: #0f1520;
+  background: #0d1524;
   color: var(--text);
   padding: 0.6rem 0.7rem;
 }
 
+textarea {
+  width: 100%;
+  resize: vertical;
+  line-height: 1.4;
+}
+
 button {
-  background: linear-gradient(180deg, #e1b160, var(--accent));
-  color: #161009;
-  font-weight: 600;
+  background: linear-gradient(180deg, #ffa04d, var(--accent));
+  color: #241200;
+  font-weight: 700;
   cursor: pointer;
 }
 
@@ -80,11 +87,16 @@ button {
 }
 
 pre {
-  min-height: 180px;
+  min-height: 220px;
   white-space: pre-wrap;
 }
 
 ul {
   margin: 0;
   padding-left: 1.2rem;
+}
+
+.hint {
+  margin-top: 0;
+  opacity: 0.9;
 }

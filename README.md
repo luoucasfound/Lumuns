@@ -1,6 +1,6 @@
 # Lumuns
 
-Protótipo e documentação inicial para um editor de vídeo com IA focado em conteúdo documental e consistência editorial.
+Protótipo de um agente para automatizar a criação de conteúdo de ofertas para canais de afiliados da Shopee.
 
 ## Protótipo (UI)
 1. Execute um servidor local dentro da pasta do projeto:
@@ -8,5 +8,12 @@ Protótipo e documentação inicial para um editor de vídeo com IA focado em co
 2. Acesse:
    - `http://localhost:4173/prototype/`
 
-## Documento de visão do produto
-- [`docs/EDITOR_IA_DOCUMENTARIOS.md`](docs/EDITOR_IA_DOCUMENTARIOS.md)
+## O que o protótipo faz
+- Configura o perfil e nicho do canal.
+- Lê uma lista de produtos em lote.
+- Gera copys prontas para posts.
+- Gera sequência de Stories.
+- Monta cronograma semanal de publicações.
+
+## Observação
+O protótipo não publica automaticamente no Instagram nem integra API da Shopee; ele acelera o planejamento e a geração de textos para publicação manual com revisão.
