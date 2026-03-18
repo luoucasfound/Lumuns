@@ -3,29 +3,39 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Lumuns Prototype — Jogo 3D Naruto Style</title>
+    <title>Lumuns Prototype — Arena 3D (Next Gen)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Orbitron:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <div id="game"></div>
 
-    <div class="hud hud-left panel-pixel">
+    <div class="vignette"></div>
+
+    <div class="hud hud-left panel-modern">
+      <div class="hud-subtitle">NINJA CORE</div>
       <div class="hud-title">CHAKRA</div>
-      <div class="chakra-row">
-        <span class="chakra-dot off"></span>
-        <span class="chakra-dot on"></span>
-      </div>
       <div class="chakra-bar">
         <div id="chakraFill" class="chakra-fill"></div>
       </div>
+      <div class="hud-meta">
+        <span id="stateLabel">NORMAL</span>
+        <span>BOOST READY</span>
+      </div>
     </div>
 
-    <div class="hud hud-right panel-pixel">
-      <div>SCORE: <span id="score">000</span></div>
-      <div>TIME: <span id="time">6:09</span></div>
+    <div class="hud hud-right panel-modern">
+      <div class="stat-line"><span>SCORE</span> <strong id="score">000</strong></div>
+      <div class="stat-line"><span>TIME</span> <strong id="time">6:09</strong></div>
+      <div class="stat-line"><span>SPEED</span> <strong id="speed">0.0</strong></div>
     </div>
 
-    <div class="controls panel-pixel">WASD: Mover | SPACE: Pular</div>
+    <div class="controls panel-modern">WASD: MOVER • SPACE: PULAR • SHIFT: DASH</div>
 
     <script type="importmap">
       {
