@@ -1,90 +1,165 @@
 :root {
-  color-scheme: dark;
-  --bg: #0f1218;
-  --panel: #161b24;
-  --line: #2a3446;
-  --text: #e8edf7;
-  --accent: #d8a24d;
+  --hud-bg: linear-gradient(145deg, rgba(17, 27, 49, 0.75), rgba(22, 35, 62, 0.55));
+  --hud-border: rgba(179, 209, 255, 0.6);
+  --hud-highlight: rgba(255, 255, 255, 0.28);
+  --text-main: #eaf2ff;
+  --text-muted: #97acd4;
+  --chakra-main: linear-gradient(90deg, #00d9ff 0%, #3b82ff 60%, #7b4dff 100%);
 }
 
 * {
   box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% -10%, #5a89c7 0%, #24385f 48%, #0a1220 100%);
+  color: var(--text-main);
   font-family: Inter, system-ui, sans-serif;
 }
 
-body {
-  margin: 0;
-  background: radial-gradient(circle at top, #1d2637 0%, var(--bg) 45%);
-  color: var(--text);
+#game {
+  position: fixed;
+  inset: 0;
 }
 
-header,
-main {
-  width: min(980px, 92vw);
-  margin: 0 auto;
+canvas {
+  display: block;
 }
 
-header {
-  padding: 2rem 0 1rem;
+.vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle, transparent 48%, rgba(0, 0, 0, 0.35) 100%);
+  z-index: 1;
 }
 
-h1,
-h2 {
-  margin: 0 0 0.6rem;
+.panel-modern {
+  border-radius: 18px;
+  border: 1px solid var(--hud-border);
+  background: var(--hud-bg);
+  box-shadow:
+    0 15px 32px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 var(--hud-highlight),
+    inset 0 0 28px rgba(62, 122, 255, 0.2);
+  backdrop-filter: blur(8px);
 }
 
-.panel {
-  background: color-mix(in oklab, var(--panel), black 5%);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 1rem;
-  margin-bottom: 1rem;
+.hud {
+  position: fixed;
+  top: 22px;
+  width: min(420px, 42vw);
+  padding: 16px 18px;
+  z-index: 5;
+  pointer-events: none;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 0.8rem;
+.hud-left {
+  left: 22px;
 }
 
-label {
+.hud-right {
+  right: 22px;
+}
+
+.hud-subtitle {
+  font-family: Orbitron, sans-serif;
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.hud-title {
+  font-family: Orbitron, sans-serif;
+  font-size: clamp(20px, 2vw, 28px);
+  font-weight: 700;
+  letter-spacing: 3px;
+  margin-bottom: 10px;
+}
+
+.chakra-bar {
+  width: 100%;
+  height: 22px;
+  border-radius: 999px;
+  background: rgba(9, 15, 31, 0.7);
+  border: 1px solid rgba(147, 182, 255, 0.55);
+  overflow: hidden;
+}
+
+.chakra-fill {
+  width: 34%;
+  height: 100%;
+  background: var(--chakra-main);
+  box-shadow: 0 0 18px rgba(47, 170, 255, 0.7);
+  transition: width 120ms linear;
+}
+
+.hud-meta {
+  margin-top: 10px;
   display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  font-size: 0.95rem;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: Orbitron, sans-serif;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--text-muted);
 }
 
-input,
-select,
-button,
-pre {
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  background: #0f1520;
-  color: var(--text);
-  padding: 0.6rem 0.7rem;
-}
-
-button {
-  background: linear-gradient(180deg, #e1b160, var(--accent));
-  color: #161009;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.actions {
+.stat-line {
   display: flex;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-  margin-bottom: 0.8rem;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 18px;
+  font-family: Orbitron, sans-serif;
+  letter-spacing: 1px;
+  font-size: clamp(16px, 1.8vw, 24px);
+  margin-bottom: 8px;
 }
 
-pre {
-  min-height: 180px;
-  white-space: pre-wrap;
+.stat-line:last-child {
+  margin-bottom: 0;
 }
 
-ul {
-  margin: 0;
-  padding-left: 1.2rem;
+.stat-line span {
+  color: var(--text-muted);
+}
+
+.controls {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 5;
+  padding: 12px 24px;
+  font-family: Orbitron, sans-serif;
+  font-size: clamp(12px, 1.3vw, 18px);
+  letter-spacing: 1px;
+  pointer-events: none;
+}
+
+@media (max-width: 900px) {
+  .hud {
+    width: min(340px, 46vw);
+    padding: 14px;
+  }
+
+  .hud-left {
+    left: 12px;
+  }
+
+  .hud-right {
+    right: 12px;
+  }
+
+  .controls {
+    width: min(92vw, 760px);
+    text-align: center;
+    bottom: 14px;
+  }
 }
