@@ -3,88 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Lumuns Prototype — Editor IA Documentários</title>
+    <title>Lumuns Prototype — Jogo 3D Naruto Style</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <header>
-      <h1>Lumuns — Protótipo de Editor IA para Documentários</h1>
-      <p>
-        Fluxo guiado para criar vídeos no estilo documental com consistência de estética,
-        roteiro e narração.
-      </p>
-    </header>
+    <div id="game"></div>
 
-    <main>
-      <section class="panel">
-        <h2>1) Brief do episódio</h2>
-        <div class="grid">
-          <label>
-            Tema
-            <input id="theme" value="A queda do Império Romano" />
-          </label>
-          <label>
-            Tipo de episódio
-            <select id="episodeType">
-              <option>Evento histórico</option>
-              <option>Biografia</option>
-              <option>Mistério histórico</option>
-            </select>
-          </label>
-          <label>
-            Duração alvo
-            <select id="duration">
-              <option>8 min</option>
-              <option selected>12 min</option>
-              <option>20 min</option>
-            </select>
-          </label>
-        </div>
-      </section>
+    <div class="hud hud-left panel-pixel">
+      <div class="hud-title">CHAKRA</div>
+      <div class="chakra-row">
+        <span class="chakra-dot off"></span>
+        <span class="chakra-dot on"></span>
+      </div>
+      <div class="chakra-bar">
+        <div id="chakraFill" class="chakra-fill"></div>
+      </div>
+    </div>
 
-      <section class="panel">
-        <h2>2) Style DNA (consistência visual/sonora)</h2>
-        <div class="grid">
-          <label>
-            Paleta
-            <select id="palette">
-              <option selected>History Gold</option>
-              <option>BBC Cold Blue</option>
-              <option>Archive Sepia</option>
-            </select>
-          </label>
-          <label>
-            Narração
-            <select id="voice">
-              <option selected>Masculina grave</option>
-              <option>Feminina clara</option>
-              <option>Neutra jornalística</option>
-            </select>
-          </label>
-          <label>
-            Intensidade trilha
-            <input id="music" type="range" min="1" max="10" value="6" />
-          </label>
-        </div>
-        <button id="saveStyle">Salvar preset no banco</button>
-      </section>
+    <div class="hud hud-right panel-pixel">
+      <div>SCORE: <span id="score">000</span></div>
+      <div>TIME: <span id="time">6:09</span></div>
+    </div>
 
-      <section class="panel">
-        <h2>3) Copiloto IA</h2>
-        <div class="actions">
-          <button id="generateScript">Gerar roteiro</button>
-          <button id="generateNarration">Gerar narração</button>
-          <button id="autoCut">Montar rough cut</button>
-        </div>
-        <pre id="output" aria-live="polite">Aguardando ação...</pre>
-      </section>
+    <div class="controls panel-pixel">WASD: Mover | SPACE: Pular</div>
 
-      <section class="panel">
-        <h2>4) Banco de consistência (simulado)</h2>
-        <ul id="styleDB"></ul>
-      </section>
-    </main>
-
-    <script src="script.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.164.1/build/three.module.js"
+        }
+      }
+    </script>
+    <script type="module" src="script.js"></script>
   </body>
 </html>
